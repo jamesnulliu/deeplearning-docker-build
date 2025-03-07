@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+IMPORTANT NOTICE:
+The scripts and build files in this repository are licensed under the MIT 
+license as stated above. However, the Docker container built using these 
+scripts may include third-party software components that are downloaded from 
+the internet during the build process. These third-party components are subject
+to their own respective licenses. Users of the resulting container are 
+responsible for complying with all applicable third-party licenses. This MIT 
+license applies only to the scripts and configuration files in this repository,
+not to the software installed within the container.

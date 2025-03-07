@@ -1,0 +1,7 @@
+# case insensitive tab completion
+set completion-ignore-case on
+
+# show all available completions
+set show-all-if-ambiguous on
+
+set mark-symlinked-directories on
