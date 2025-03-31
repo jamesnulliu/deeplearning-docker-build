@@ -4,8 +4,6 @@ if [ ! $CONTAINER_NAME ]; then
     CONTAINER_NAME=tmp
 fi
 
-# [NOTE]
-#   1. With `-rm` option, this contianer will be removed after you exit.
 docker run -rm \
     -it \
     --name $CONTAINER_NAME \

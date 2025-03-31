@@ -1,26 +1,26 @@
 FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
 
 LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
-LABEL version="1.2"
+LABEL version="1.3"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
-ARG LLVM_VERSION=20
+ARG LLVM_VERSION=21
 
 
 # Some basic tools
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
-        git apt-utils lsb-release software-properties-common gnupg  \
-        vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config \
-        build-essential gdb htop 
+    git apt-utils lsb-release software-properties-common gnupg  \
+    vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config \
+    build-essential gdb htop 
 
 # Vcpkg, Cmake, LLVM
 RUN cd /usr/local && git clone https://github.com/microsoft/vcpkg.git && \ 
     cd vcpkg && ./bootstrap-vcpkg.sh  && \
     wget -O /tmp/kitware-archive.sh \
-        https://apt.kitware.com/kitware-archive.sh && \
+    https://apt.kitware.com/kitware-archive.sh && \
     bash /tmp/kitware-archive.sh && \
     apt-get update && apt-get install -y cmake && \
     wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
@@ -36,8 +36,8 @@ RUN wget -O /tmp/miniconda3.sh \
     conda init --all && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
     pip3 install torch==2.6.0 torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu126 \
-        --no-cache-dir
+    --index-url https://download.pytorch.org/whl/cu126 \
+    --no-cache-dir
 
 # Some final steps
 COPY data/.vimrc data/.inputrc data/.bashrc.in /tmp/
@@ -45,4 +45,8 @@ RUN touch /root/.bashrc && cat /tmp/.bashrc.in >> /root/.bashrc && \
     mv /tmp/.vimrc /root/.vimrc && \
     mv /tmp/.inputrc /root/.inputrc && \
     apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* 
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    git config --system --unset-all user.name || true && \
+    git config --system --unset-all user.email || true && \
+    git config --global --unset-all user.name || true && \
+    git config --global --unset-all user.email || true
