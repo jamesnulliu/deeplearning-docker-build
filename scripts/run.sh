@@ -9,6 +9,7 @@ docker run -td \
     --name $CONTAINER_NAME \
     --gpus all \
     --network=host \
+    --shm-size=16G \
     --hostname $CONTAINER_NAME \
     -v $HOME/Projects:/root/Projects \
     $IMAGE_NAME

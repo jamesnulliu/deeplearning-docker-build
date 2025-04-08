@@ -13,8 +13,9 @@ ARG LLVM_VERSION=21
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
     git apt-utils lsb-release software-properties-common gnupg  \
-    vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config \
-    build-essential gdb htop tmux
+    vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config ssh \
+    build-essential gdb htop tmux ttf-mscorefonts-installer && \
+    fc-cache -f -v
 
 # Vcpkg, Cmake, LLVM
 RUN cd /usr/local && git clone https://github.com/microsoft/vcpkg.git && \ 
