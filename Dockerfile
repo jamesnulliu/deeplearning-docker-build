@@ -3,9 +3,6 @@ ARG UBUNTU_VERSION=24.04
 FROM ubuntu:${UBUNTU_VERSION}
 
 ARG VERSION
-LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
-LABEL version=${VERSION}
-
 # https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html
 ARG CUDA_VERSION=12.6.0
 ARG CUDNN_VERSION=9.8.0
@@ -16,6 +13,11 @@ ARG LLVM_VERSION=21
 
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
+
+LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
+LABEL version=${VERSION}
+
+SHELL ["/bin/bash", "-c"]
 
 # Some basic tools
 RUN apt-get update && apt-get upgrade -y && \
