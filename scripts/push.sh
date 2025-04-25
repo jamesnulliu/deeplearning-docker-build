@@ -1,3 +1,3 @@
-IMAGE_NAME=$1
+source ./scripts/.image-configs.sh
 
 docker image push $IMAGE_NAME

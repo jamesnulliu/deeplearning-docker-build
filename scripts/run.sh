@@ -1,5 +1,6 @@
 CONTAINER_NAME=$1
-IMAGE_NAME=jamesnulliu/deeplearning:v1.4-torch2.6-cuda12.6-ubuntu24.04 
+
+source ./scripts/.image-configs.sh
 
 if [ ! $CONTAINER_NAME ]; then
     CONTAINER_NAME=tmp

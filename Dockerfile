@@ -1,18 +1,26 @@
-FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu24.04
+ARG UBUNTU_VERSION=24.04
 
+FROM ubuntu:${UBUNTU_VERSION}
+
+ARG VERSION
 LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
-LABEL version="1.4"
+LABEL version=${VERSION}
 
+# https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html
+ARG CUDA_VERSION=12.6.0
+ARG CUDNN_VERSION=9.8.0
+# https://pytorch.org/
+ARG TORCH_VERSION=2.7.0
 ARG DEBIAN_FRONTEND=noninteractive
-ENV LANGUAGE=en_US.UTF-8
-ENV LANG=en_US.UTF-8
 ARG LLVM_VERSION=21
 
+ENV LANGUAGE=en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 # Some basic tools
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
-    git apt-utils lsb-release software-properties-common gnupg  \
+    apt-utils lsb-release software-properties-common gnupg git \
     vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config ssh \
     build-essential gdb htop tmux ttf-mscorefonts-installer && \
     fc-cache -f -v
@@ -33,11 +41,8 @@ RUN cd /usr/local && git clone https://github.com/microsoft/vcpkg.git && \
     ln -s /usr/bin/clang-tidy-${LLVM_VERSION} /usr/bin/clang-tidy && \
     ln -s /usr/bin/clang-format-${LLVM_VERSION} /usr/bin/clang-format
 
-# User config files
-COPY data/.vimrc data/.inputrc data/.bashrc /tmp/
-RUN mv /tmp/.bashrc /root/.bashrc && \
-    mv /tmp/.vimrc /root/.vimrc && \
-    mv /tmp/.inputrc /root/.inputrc
+# Config files
+COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
 
 # Install Miniconda3 and conda env
 RUN wget -O /tmp/miniconda3.sh \
@@ -45,10 +50,16 @@ RUN wget -O /tmp/miniconda3.sh \
     mkdir -p /root/miniconda3 && \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
-    conda upgrade libstdcxx-ng -c conda-forge -y && \
-    pip3 install torch==2.6.0 torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu126 \
-    --no-cache-dir
+    cat << EOF > /tmp/conda_essentials.sh && \
+        conda activate base && \
+        conda upgrade libstdcxx-ng -c conda-forge -y && \
+        conda install -y nvidia/label/cuda-${CUDA_VERSION}::cuda-toolkit && \
+        conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
+    EOF && \
+    bash /tmp/conda_essentials.sh && \
+    pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu126 \
+        --no-cache-dir
 
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \

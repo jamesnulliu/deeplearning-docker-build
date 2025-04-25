@@ -142,12 +142,6 @@ env_unload() {
     export $env_var=$(IFS=:; echo "${new_paths[*]}")
 }
 
-export CUDA_HOME="/usr/local/cuda"
-alias LOAD_CUDA="env_load PATH $CUDA_HOME/bin; env_load LD_LIBRARY_PATH $CUDA_HOME/lib64"
-alias UNLOAD_CUDA="env_unload PATH $CUDA_HOME/bin; env_unload LD_LIBRARY_PATH $CUDA_HOME/lib64"
-# Load cuda by default
-LOAD_CUDA
-
 export VCPKG_HOME="/usr/local/vcpkg"
 export VCPKG_ROOT=$VCPKG_HOME
 alias LOAD_VCPKG="env_load PATH $VCPKG_HOME"
