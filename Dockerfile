@@ -2,7 +2,7 @@ ARG UBUNTU_VERSION=24.04
 
 FROM ubuntu:${UBUNTU_VERSION}
 
-ARG VERSION
+ARG IMAGE_VERSION
 # https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html
 ARG CUDA_VERSION=12.6.0
 ARG CUDNN_VERSION=9.8.0
@@ -15,7 +15,7 @@ ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
 LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
-LABEL version=${VERSION}
+LABEL version=${IMAGE_VERSION}
 
 SHELL ["/bin/bash", "-c"]
 
@@ -52,12 +52,10 @@ RUN wget -O /tmp/miniconda3.sh \
     mkdir -p /root/miniconda3 && \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
-    cat << EOF > /tmp/conda_essentials.sh && \
-        conda activate base && \
-        conda upgrade libstdcxx-ng -c conda-forge -y && \
-        conda install -y nvidia/label/cuda-${CUDA_VERSION}::cuda-toolkit && \
-        conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
-    EOF && \
+    conda activate base && \
+    conda upgrade libstdcxx-ng -c conda-forge -y && \
+    conda install -y nvidia/label/cuda-${CUDA_VERSION}::cuda-toolkit && \
+    echo "y" | conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
     bash /tmp/conda_essentials.sh && \
     pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu126 \
