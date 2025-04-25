@@ -55,8 +55,7 @@ RUN wget -O /tmp/miniconda3.sh \
     conda activate base && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
     conda install -y nvidia/label/cuda-${CUDA_VERSION}::cuda-toolkit && \
-    echo "y" | conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
-    bash /tmp/conda_essentials.sh && \
+    conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
     pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu126 \
         --no-cache-dir
