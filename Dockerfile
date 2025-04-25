@@ -4,7 +4,7 @@ FROM ubuntu:${UBUNTU_VERSION}
 
 ARG IMAGE_VERSION
 # https://docs.nvidia.com/deeplearning/cudnn/backend/latest/reference/support-matrix.html
-ARG CUDA_VERSION=12.6.0
+ARG CUDA_VERSION=12.6.1
 ARG CUDNN_VERSION=9.8.0
 # https://pytorch.org/
 ARG TORCH_VERSION=2.7.0
@@ -52,9 +52,8 @@ RUN wget -O /tmp/miniconda3.sh \
     mkdir -p /root/miniconda3 && \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
-    conda activate base && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
-    conda install -y nvidia/label/cuda-${CUDA_VERSION}::cuda-toolkit && \
+    conda install nvidia/label/cuda-${CUDA_VERSION}::cuda-nvcc && \
     conda install -y nvidia/label/cudnn-${CUDNN_VERSION}::cudnn && \
     pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu126 \
