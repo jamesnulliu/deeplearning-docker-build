@@ -152,5 +152,6 @@ export VCPKG_HOME="/usr/local/vcpkg"
 export VCPKG_ROOT=$VCPKG_HOME
 alias LOAD_VCPKG="env_load PATH $VCPKG_HOME"
 alias UNLOAD_VCPKG="env_unload PATH $VCPKG_HOME"
+alias VCPKG_UPDATE="pushd $VCPKG_HOME && git pull && popd"
 # Load vcpkg by default
 LOAD_VCPKG
