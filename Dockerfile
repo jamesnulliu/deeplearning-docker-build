@@ -21,7 +21,8 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
     apt-utils lsb-release software-properties-common gnupg git \
     vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config ssh \
-    build-essential gdb htop tmux ttf-mscorefonts-installer && \
+    build-essential gdb htop tmux ttf-mscorefonts-installer  kmod \
+    libssl-dev && \
     fc-cache -f -v
 
 # Vcpkg, Cmake, LLVM
