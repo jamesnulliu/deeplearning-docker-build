@@ -59,6 +59,10 @@ RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
 # Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
+# Clean caches here for less disk space usage
+RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* 
+
 # Config files
 COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
 
@@ -69,9 +73,10 @@ RUN wget -O /tmp/miniconda3.sh \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
-    pip3 install nvitop && \
+    pip3 install nvitop --no-cache-dir && \
+    TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \ 
     pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
-        --index-url https://download.pytorch.org/whl/cu126 \
+        --index-url "https://download.pytorch.org/whl/cu${TORCH_CU_VER}" \
         --no-cache-dir
 
 # Some final steps
