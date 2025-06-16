@@ -9,5 +9,6 @@ docker build \
     --build-arg CUDA_VERSION=$CUDA_VERSION \
     --build-arg UBUNTU_VERSION=$UBUNTU_VERSION \
     --build-arg CUDNN_VERSION=$CUDNN_VERSION \
+    --build-arg LLVM_VERSION=$LLVM_VERSION \
     -t $IMAGE_NAME \
     .

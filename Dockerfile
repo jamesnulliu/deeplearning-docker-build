@@ -4,10 +4,10 @@ ARG UBUNTU_VERSION
 FROM nvidia/cuda:${CUDA_VERSION}-cudnn-devel-ubuntu${UBUNTU_VERSION}
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG LLVM_VERSION=21
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
+ARG LLVM_VERSION
 ARG IMAGE_VERSION
 ARG TORCH_VERSION
 
@@ -25,21 +25,39 @@ RUN apt-get update && apt-get upgrade -y && \
     libssl-dev && \
     fc-cache -f -v
 
-# Vcpkg, Cmake, LLVM
+# Vcpkg
 RUN cd /usr/local && git clone https://github.com/microsoft/vcpkg.git && \ 
-    cd vcpkg && ./bootstrap-vcpkg.sh  && \
-    wget -O /tmp/kitware-archive.sh \
+    cd vcpkg && ./bootstrap-vcpkg.sh 
+
+# CMake
+RUN wget -O /tmp/kitware-archive.sh \
     https://apt.kitware.com/kitware-archive.sh && \
     bash /tmp/kitware-archive.sh && \
-    apt-get update && apt-get install -y cmake && \
-    wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
-    chmod +x /tmp/llvm.sh && /tmp/llvm.sh ${LLVM_VERSION} && \
-    apt-get install -y libomp-${LLVM_VERSION}-dev && \
+    apt-get update && apt-get install -y cmake 
+
+# LLVM
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
+        tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
+        tee /etc/apt/sources.list.d/llvm.list && \
+    echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
+        tee -a /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && apt-get install -y \
+        clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
+        clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
+        clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
+        clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
+        lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
+        libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
     ln -s /usr/bin/clang-${LLVM_VERSION} /usr/bin/clang && \
     ln -s /usr/bin/clang++-${LLVM_VERSION} /usr/bin/clang++ && \
     ln -s /usr/bin/clangd-${LLVM_VERSION} /usr/bin/clangd && \
     ln -s /usr/bin/clang-tidy-${LLVM_VERSION} /usr/bin/clang-tidy && \
-    ln -s /usr/bin/clang-format-${LLVM_VERSION} /usr/bin/clang-format
+    ln -s /usr/bin/clang-format-${LLVM_VERSION} /usr/bin/clang-format && \
+    ln -s /usr/bin/lldb-${LLVM_VERSION} /usr/bin/lldb
+
+# Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Config files
 COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
@@ -51,6 +69,7 @@ RUN wget -O /tmp/miniconda3.sh \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
+    pip3 install nvitop && \
     pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu126 \
         --no-cache-dir
