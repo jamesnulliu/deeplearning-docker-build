@@ -9,14 +9,10 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
-      # If any matrix job fails, cancel all others immediately.
       fail-fast: true
       matrix:
-        # Defines the different configurations to build.
-        # This will generate 16 parallel jobs (2 * 2 * 2 * 2).
         dockerfile: ["Dockerfile.cuda", "Dockerfile.common"]
         install_llvm: [true, false]
-        install_rust: [true, false]
         install_torch: [true, false]
 
     steps:
@@ -32,27 +28,24 @@ jobs:
           swap-storage: true
 
       - name: Checkout repository
-        uses: actions/checkout@v4 # Using the latest version
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3 # Using the latest version
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3 # Using the latest version
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
         env:
-          # Set environment variables for the build script from the matrix
           INSTALL_LLVM: ${{ matrix.install_llvm }}
-          INSTALL_RUST: ${{ matrix.install_rust }}
           INSTALL_TORCH: ${{ matrix.install_torch }}
-        # Pass the correct Dockerfile name from the matrix to the build script
-        run: bash ./scripts/build.sh "${{ matrix.dockerfile }}"
+        run: |
+          IMAGE_NAME=$(bash ./scripts/build.sh "${{ matrix.dockerfile }}")
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
-      - name: Push Docker image(s)
-        # This assumes push.sh can discover and push the image(s) created
-        # in the previous step without explicit arguments.
-        run: bash ./scripts/push.sh
+      - name: Push Docker image
+        run: docker image push "${{ env.IMAGE_NAME }}"

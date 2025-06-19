@@ -7,6 +7,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
+ARG INSTALL_LLVM
+ARG INSTALL_RUST
+ARG INSTALL_TORCH
 ARG LLVM_VERSION
 ARG IMAGE_VERSION
 ARG TORCH_VERSION
@@ -21,7 +24,7 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
     apt-utils lsb-release software-properties-common gnupg git \
     vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config ssh \
-    build-essential gdb htop tmux ttf-mscorefonts-installer  kmod \
+    build-essential gdb htop tmux ttf-mscorefonts-installer kmod \
     libssl-dev && \
     fc-cache -f -v
 
@@ -36,7 +39,7 @@ RUN wget -O /tmp/kitware-archive.sh \
     apt-get update && apt-get install -y cmake 
 
 # LLVM
-RUN if [[ "${INSTALL_LLVM}" == "ture" ]]; then \
+RUN if [[ "${INSTALL_LLVM}" == "true" ]]; then \
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
             tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
         echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
@@ -56,12 +59,10 @@ RUN if [[ "${INSTALL_LLVM}" == "ture" ]]; then \
         ln -s /usr/bin/clang-tidy-${LLVM_VERSION} /usr/bin/clang-tidy && \
         ln -s /usr/bin/clang-format-${LLVM_VERSION} /usr/bin/clang-format && \
         ln -s /usr/bin/lldb-${LLVM_VERSION} /usr/bin/lldb \
-    fi
+    ; fi
 
 # Rust
-RUN if [[ "${INSTALL_RULST}" == "true" ]]; then \
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    fi
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Config files
 COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
@@ -75,11 +76,11 @@ RUN wget -O /tmp/miniconda3.sh \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
     pip3 install nvitop --no-cache-dir && \
     if [[ "${INSTALL_TORCH}" == "true" ]]; then \
-        TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \ 
+        TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \
         pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
-            --index-url "https://download.pytorch.org/whl/cu${TORCH_CU_VER}" \
+            --index-url https://download.pytorch.org/whl/cpu \
             --no-cache-dir \
-    fi
+    ; fi
 
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
