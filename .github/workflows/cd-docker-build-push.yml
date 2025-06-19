@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        dockerfile: ["Dockerfile.cuda", "Dockerfile.common"]
+        dockerfile: ["Dockerfile.cuda", "Dockerfile.cpu"]
         install_llvm: [true, false]
         install_torch: [true, false]
 

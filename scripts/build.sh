@@ -4,6 +4,7 @@ DOCKER_FILE=$1
 
 source ./scripts/.image-configs.sh
 
+if [[ "${DOCKER_FILE}" == *.cpu ]]; then IMAGE_TAG="${IMAGE_TAG}-cpu"; fi
 if [[ "${DOCKER_FILE}" == *.cuda ]]; then IMAGE_TAG="${IMAGE_TAG}-cuda${CUDA_VERSION}"; fi
 if [[ "${INSTALL_TORCH}" == "true" ]]; then IMAGE_TAG="${IMAGE_TAG}-torch${TORCH_VERSION}"; fi
 if [[ "${INSTALL_LLVM}" == "true" ]]; then IMAGE_TAG="${IMAGE_TAG}-llvm${LLVM_VERSION}"; fi
