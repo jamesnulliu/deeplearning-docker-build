@@ -7,8 +7,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
-ARG INSTALL_LLVM
-ARG INSTALL_RUST
 ARG INSTALL_TORCH
 ARG LLVM_VERSION
 ARG IMAGE_VERSION
@@ -39,27 +37,25 @@ RUN wget -O /tmp/kitware-archive.sh \
     apt-get update && apt-get install -y cmake 
 
 # LLVM
-RUN if [[ "${INSTALL_LLVM}" == "true" ]]; then \
-        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
-            tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
-        echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
-            tee /etc/apt/sources.list.d/llvm.list && \
-        echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
-            tee -a /etc/apt/sources.list.d/llvm.list && \
-        apt-get update && apt-get install -y \
-            clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
-            clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
-            clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
-            clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
-            lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
-            libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
-        ln -s /usr/bin/clang-${LLVM_VERSION} /usr/bin/clang && \
-        ln -s /usr/bin/clang++-${LLVM_VERSION} /usr/bin/clang++ && \
-        ln -s /usr/bin/clangd-${LLVM_VERSION} /usr/bin/clangd && \
-        ln -s /usr/bin/clang-tidy-${LLVM_VERSION} /usr/bin/clang-tidy && \
-        ln -s /usr/bin/clang-format-${LLVM_VERSION} /usr/bin/clang-format && \
-        ln -s /usr/bin/lldb-${LLVM_VERSION} /usr/bin/lldb \
-    ; fi
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
+        tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
+    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
+        tee /etc/apt/sources.list.d/llvm.list && \
+    echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
+        tee -a /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && apt-get install -y \
+        clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
+        clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
+        clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
+        clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
+        lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
+        libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
+    ln -s /usr/bin/clang-${LLVM_VERSION}         /usr/bin/clang && \
+    ln -s /usr/bin/clang++-${LLVM_VERSION}       /usr/bin/clang++ && \
+    ln -s /usr/bin/clangd-${LLVM_VERSION}        /usr/bin/clangd && \
+    ln -s /usr/bin/clang-tidy-${LLVM_VERSION}    /usr/bin/clang-tidy && \
+    ln -s /usr/bin/clang-format-${LLVM_VERSION}  /usr/bin/clang-format && \
+    ln -s /usr/bin/lldb-${LLVM_VERSION}          /usr/bin/lldb 
 
 # Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -68,12 +64,16 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
 
 # Install Miniconda3 and conda env
+# [TODO] Conda now uses python=3.13 in default. However, some packages (i.e.,
+#        vllm) only support python<=3.12. That's why I install python=3.12 
+#        mannually here. Maybe some days later I will remove this command.
 RUN wget -O /tmp/miniconda3.sh \
     https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     mkdir -p /root/miniconda3 && \
     bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
     \. /root/miniconda3/bin/activate && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
+    conda install -y python=3.12 && \
     pip3 install nvitop --no-cache-dir && \
     if [[ "${INSTALL_TORCH}" == "true" ]]; then \
         TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \
@@ -85,6 +85,7 @@ RUN wget -O /tmp/miniconda3.sh \
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    conda clean --all -y && pip cache purge && \
     git config --system --unset-all user.name || true && \
     git config --system --unset-all user.email || true && \
     git config --global --unset-all user.name || true && \

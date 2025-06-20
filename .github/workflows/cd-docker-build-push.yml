@@ -9,10 +9,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         dockerfile: ["Dockerfile.cuda", "Dockerfile.cpu"]
-        install_llvm: [true, false]
         install_torch: [true, false]
 
     steps:
@@ -41,7 +40,6 @@ jobs:
 
       - name: Build Docker image
         env:
-          INSTALL_LLVM: ${{ matrix.install_llvm }}
           INSTALL_TORCH: ${{ matrix.install_torch }}
         run: |
           IMAGE_NAME=$(bash ./scripts/build.sh "${{ matrix.dockerfile }}")
