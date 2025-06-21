@@ -1,8 +1,14 @@
-CONTAINER_NAME=$1
+set -e
 
-source ./scripts/.image-configs.sh
+IMAGE_NAME=$1
+CONTAINER_NAME=$2
 
-if [ ! $CONTAINER_NAME ]; then
+if [ ! $IMAGE_NAME ]; then
+    echo "Usage: $0 <image_name> [container_name]"
+    exit 1
+fi
+
+if [ ! $CONTAINER_NAME ]; then 
     CONTAINER_NAME=tmp
 fi
 
