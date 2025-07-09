@@ -61,7 +61,8 @@ RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Config files
-COPY data/.vimrc data/.inputrc data/.bashrc data/.tmux.conf /root/
+COPY data/.vimrc data/.inputrc data/.bashrc data/.setup_env.sh data/.tmux.conf \
+    /root/
 
 # Install Miniconda3 and conda env
 # [TODO] Conda now uses python=3.13 in default. However, some packages (i.e.,
