@@ -15,6 +15,12 @@ ARG TORCH_VERSION
 LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
 LABEL version=${IMAGE_VERSION}
 
+ENV CUDA_HOME=/usr/local/cuda
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV VCPKG_HOME=/opt/vcpkg
+ENV CONDA_HOME=/opt/miniconda3
+ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
+
 SHELL ["/bin/bash", "-c"]
 
 # Some basic tools
@@ -27,8 +33,8 @@ RUN apt-get update && apt-get upgrade -y && \
     fc-cache -f -v
 
 # Vcpkg
-RUN cd /usr/local && git clone https://github.com/microsoft/vcpkg.git && \ 
-    cd vcpkg && ./bootstrap-vcpkg.sh 
+RUN git clone https://github.com/microsoft/vcpkg.git ${VCPKG_HOME} && \ 
+    cd ${VCPKG_HOME} && ./bootstrap-vcpkg.sh 
 
 # CMake
 RUN wget -O /tmp/kitware-archive.sh \
@@ -37,19 +43,16 @@ RUN wget -O /tmp/kitware-archive.sh \
     apt-get update && apt-get install -y cmake 
 
 # LLVM
-RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
-        tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
-    echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
-        tee /etc/apt/sources.list.d/llvm.list && \
-    echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble main" | \
-        tee -a /etc/apt/sources.list.d/llvm.list && \
+RUN wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
+    chmod +x /tmp/llvm.sh && \
+    /tmp/llvm.sh ${LLVM_VERSION} && \
     apt-get update && apt-get install -y \
-        clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
-        clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
-        clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
-        clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
-        lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
-        libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
+    clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
+    clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
+    clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
+    clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
+    lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
+    libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
     ln -s /usr/bin/clang-${LLVM_VERSION}         /usr/bin/clang && \
     ln -s /usr/bin/clang++-${LLVM_VERSION}       /usr/bin/clang++ && \
     ln -s /usr/bin/clangd-${LLVM_VERSION}        /usr/bin/clangd && \
@@ -61,8 +64,13 @@ RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Config files
-COPY data/.vimrc data/.inputrc data/.bashrc data/.setup_env.sh data/.tmux.conf \
-    /root/
+COPY data/vimrc /etc/vim/vimrc
+COPY data/env_setup.sh ${ENV_SETUP_FILE}
+# [TODO] The config files should not only be copied only to /root, but also to
+#        /etc/skel, so that the new user can also use them. But in singularity,
+#        /etc/skel has no effect, so I will decide what to do later.
+COPY data/.inputrc data/.bashrc data/.tmux.conf /root/
+COPY data/.inputrc data/.bashrc data/.tmux.conf /etc/skel/
 
 # Install Miniconda3 and conda env
 # [TODO] Conda now uses python=3.13 in default. However, some packages (i.e.,
@@ -70,24 +78,30 @@ COPY data/.vimrc data/.inputrc data/.bashrc data/.setup_env.sh data/.tmux.conf \
 #        mannually here. Maybe some days later I will remove this command.
 RUN wget -O /tmp/miniconda3.sh \
     https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    mkdir -p /root/miniconda3 && \
-    bash /tmp/miniconda3.sh -b -u -p /root/miniconda3 && \
-    \. /root/miniconda3/bin/activate && \
+    mkdir -p ${CONDA_HOME} && \
+    bash /tmp/miniconda3.sh -b -u -p ${CONDA_HOME} && \
+    ${CONDA_HOME}/bin/conda tos accept && \
+    \. ${CONDA_HOME}/bin/activate && \
     conda upgrade libstdcxx-ng -c conda-forge -y && \
     conda install -y python=3.12 && \
     pip3 install nvitop --no-cache-dir && \
     if [[ "${INSTALL_TORCH}" == "true" ]]; then \
-        TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \
-        pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
-            --index-url "https://download.pytorch.org/whl/cu${TORCH_CU_VER}" \
-            --no-cache-dir \
+    TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \
+    pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
+    --index-url "https://download.pytorch.org/whl/cu${TORCH_CU_VER}" \
+    --no-cache-dir \
     ; fi
 
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     conda clean --all -y && pip cache purge && \
-    git config --system --unset-all user.name || true && \
+    git config --system --unset-all user.name  || true && \
     git config --system --unset-all user.email || true && \
-    git config --global --unset-all user.name || true && \
+    git config --global --unset-all user.name  || true && \
     git config --global --unset-all user.email || true
+
+COPY data/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT [ "entrypoint.sh" ]
+CMD [ "bash" ]

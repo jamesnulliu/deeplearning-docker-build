@@ -2,7 +2,7 @@ set -e
 
 DOCKER_FILE=$1
 
-source ./scripts/.image-configs.sh
+source ./scripts/image-configs.sh
 
 if [[ "${DOCKER_FILE}" == *.cpu ]]; then 
     IMAGE_TAG="${IMAGE_TAG}-cpu"

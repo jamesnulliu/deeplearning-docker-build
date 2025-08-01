@@ -11,8 +11,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: ["Dockerfile.cuda", "Dockerfile.cpu"]
-        install_torch: [true, false]
+        dockerfile: [
+          "Dockerfile.cuda", 
+          "Dockerfile.cpu"
+        ]
+        install_torch: [
+          true, 
+          false
+        ]
 
     steps:
       - name: Free Disk Space (Ubuntu)

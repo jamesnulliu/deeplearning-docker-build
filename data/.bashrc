@@ -102,5 +102,4 @@ fi
 #    . /etc/bash_completion
 #fi
 
-# Load all environment settings
-source ~/.setup_env.sh
+source $ENV_SETUP_FILE
