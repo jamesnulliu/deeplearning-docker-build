@@ -102,5 +102,27 @@ fi
 #    . /etc/bash_completion
 #fi
 
-# Load all environment settings
-source ~/.setup_env.sh
+# @brief Add `$1` into environment variable `$2` if it is not already there.
+# @example > env_load PATH /usr/local/bin
+env_load() {
+    local env_var=$1
+    local path=$2
+    if [[ ":${!env_var}:" != *":$path:"* ]]; then
+        export $env_var="${!env_var}:$path"
+    fi
+}
+
+# @brief Remove `$1` from environment variable `$2` if it is there.
+# @example > env_unload PATH /usr/local/bin
+env_unload() {
+    local env_var=$1
+    local path=$2
+    local paths_array=(${!env_var//:/ })
+    local new_paths=()
+    for item in "${paths_array[@]}"; do
+        if [[ "$item" != "$path" ]]; then
+            new_paths+=("$item")
+        fi
+    done
+    export $env_var=$(IFS=:; echo "${new_paths[*]}")
+}
