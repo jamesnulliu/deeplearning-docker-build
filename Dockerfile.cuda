@@ -7,18 +7,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LANGUAGE=en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
-ARG INSTALL_TORCH
 ARG LLVM_VERSION
 ARG IMAGE_VERSION
-ARG TORCH_VERSION
+ARG IMAGE_NAME
 
 LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
 LABEL version=${IMAGE_VERSION}
 
+ENV IMAGE_NAME=${IMAGE_NAME}
 ENV CUDA_HOME=/usr/local/cuda
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_HOME=/opt/vcpkg
-ENV CONDA_HOME=/opt/miniconda3
+ENV UV_HOME=/opt/uv
 ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
 
 SHELL ["/bin/bash", "-c"]
@@ -26,9 +26,9 @@ SHELL ["/bin/bash", "-c"]
 # Some basic tools
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y \
-    apt-utils lsb-release software-properties-common gnupg git \
+    apt-utils lsb-release software-properties-common gnupg git acl sed \
     vim-gtk3 wget p7zip-full ninja-build curl jq pkg-config ssh \
-    build-essential gdb htop tmux ttf-mscorefonts-installer  kmod \
+    build-essential gdb htop tmux ttf-mscorefonts-installer kmod \
     libssl-dev && \
     fc-cache -f -v
 
@@ -66,36 +66,17 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 # Config files
 COPY data/vimrc /etc/vim/vimrc
 COPY data/env_setup.sh ${ENV_SETUP_FILE}
-# [TODO] The config files should not only be copied only to /root, but also to
-#        /etc/skel, so that the new user can also use them. But in singularity,
-#        /etc/skel has no effect, so I will decide what to do later.
 COPY data/.inputrc data/.bashrc data/.tmux.conf /root/
 COPY data/.inputrc data/.bashrc data/.tmux.conf /etc/skel/
+COPY data/create-shared-dir /usr/local/bin/
 
-# Install Miniconda3 and conda env
-# [TODO] Conda now uses python=3.13 in default. However, some packages (i.e.,
-#        vllm) only support python<=3.12. That's why I install python=3.12 
-#        mannually here. Maybe some days later I will remove this command.
-RUN wget -O /tmp/miniconda3.sh \
-    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    mkdir -p ${CONDA_HOME} && \
-    bash /tmp/miniconda3.sh -b -u -p ${CONDA_HOME} && \
-    ${CONDA_HOME}/bin/conda tos accept && \
-    \. ${CONDA_HOME}/bin/activate && \
-    conda upgrade libstdcxx-ng -c conda-forge -y && \
-    conda install -y python=3.12 && \
-    pip3 install nvitop --no-cache-dir && \
-    if [[ "${INSTALL_TORCH}" == "true" ]]; then \
-    TORCH_CU_VER=$(echo $CUDA_VERSION | cut -d'.' -f1,2 | tr -d '.') && \
-    pip3 install torch==${TORCH_VERSION} torchvision torchaudio \
-    --index-url "https://download.pytorch.org/whl/cu${TORCH_CU_VER}" \
-    --no-cache-dir \
-    ; fi
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | \
+        env UV_INSTALL_DIR="${UV_HOME}" UV_NO_MODIFY_PATH=1 sh
 
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    conda clean --all -y && pip cache purge && \
     git config --system --unset-all user.name  || true && \
     git config --system --unset-all user.email || true && \
     git config --global --unset-all user.name  || true && \

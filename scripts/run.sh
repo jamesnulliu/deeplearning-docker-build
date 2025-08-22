@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 
 IMAGE_NAME=$1
@@ -12,6 +14,7 @@ if [ ! $CONTAINER_NAME ]; then
     CONTAINER_NAME=tmp
 fi
 
+if [[ "$IMAGE_NAME" == *"cuda"* ]]; then
 docker run -td \
     --name $CONTAINER_NAME \
     --gpus all \
@@ -20,6 +23,15 @@ docker run -td \
     --hostname $CONTAINER_NAME \
     -v $HOME/Projects:/root/Projects \
     $IMAGE_NAME
+else
+docker run -td \
+    --name $CONTAINER_NAME \
+    --network=host \
+    --shm-size=16G \
+    --hostname $CONTAINER_NAME \
+    -v $HOME/Projects:/root/Projects \
+    $IMAGE_NAME
+fi
 
 docker cp $HOME/.ssh $CONTAINER_NAME:/root/
 docker start $CONTAINER_NAME

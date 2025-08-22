@@ -15,10 +15,6 @@ jobs:
           "Dockerfile.cuda", 
           "Dockerfile.cpu"
         ]
-        install_torch: [
-          true, 
-          false
-        ]
 
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -45,8 +41,6 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
-        env:
-          INSTALL_TORCH: ${{ matrix.install_torch }}
         run: |
           IMAGE_NAME=$(bash ./scripts/build.sh "${{ matrix.dockerfile }}")
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV

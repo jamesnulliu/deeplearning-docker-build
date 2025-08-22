@@ -1,4 +1,23 @@
-echo "[ENV-SETUP] Setting up environment with: ${ENV_SETUP_FILE}"
+set -e
+
+sed "s|\${IMAGE_NAME}|${IMAGE_NAME}|g" << 'EOF'
+===============================================================================
+                 <-. (`-')_                ,-.  _(`-')              
+                    \( OO) )   <-.         / / ( (OO ).->    <-.    
+          <-.--. ,--./ ,--/  ,--. )       / /   \    .'_   ,--. )   
+        (`-'| ,| |   \ |  |  |  (`-')    / /    '`'-..__)  |  (`-') 
+        (OO |(_| |  . '|  |) |  |OO )   / /     |  |  ' |  |  |OO ) 
+       ,--. |  | |  |\    | (|  '__ |  / /      |  |  / : (|  '__ | 
+       |  '-'  / |  | \   |  |     |' / /       |  '-'  /  |     |' 
+        `-----'  `--'  `--'  `-----'  `-'       `------'   `-----'  
+-------------------------------------------------------------------------------
+Image Name:    ${IMAGE_NAME}
+Creator:       jamesnulliu <jamesnulliu@gmail.com>
+License:       MIT
+===============================================================================
+EOF
+
+echo "[ENV-SETUP] Sourcing \${ENV_SETUP_FILE}: ${ENV_SETUP_FILE}"
 
 # @brief Add `$1` into environment variable `$2` if it is not already there.
 # @example > env_load PATH /usr/local/bin
@@ -25,31 +44,6 @@ env_unload() {
     export $var_name=$(IFS=:; echo "${new_paths[*]}")
 }
 
-if [ -d "${CONDA_HOME:-}" ]; then
-    if [[ $- == *i* ]]; then
-        # Initialize conda in interactive mode
-        __conda_setup="$('${CONDA_HOME}/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-        if [ $? -eq 0 ]; then
-            eval "$__conda_setup"
-        else
-            if [ -f "${CONDA_HOME}/etc/profile.d/conda.sh" ]; then
-                . "${CONDA_HOME}/etc/profile.d/conda.sh"
-            else
-                env_load PATH "${CONDA_HOME}/bin"
-            fi
-        fi
-        unset __conda_setup
-        echo "[ENV-SETUP] Conda initialized in interactive mode from $CONDA_HOME"
-    else
-        # Initialize conda in non-interactive mode
-        # Note that you may have to use `conda run` to use conda environments
-        . "${CONDA_HOME}/etc/profile.d/conda.sh" 
-        echo "[ENV-SETUP] Conda initialized in non-interactive mode from $CONDA_HOME."
-    fi
-else
-    unset CONDA_HOME
-fi
-
 if [ -d "${CUDA_HOME:-}" ]; then
     alias LOAD_CUDA="env_load PATH $CUDA_HOME/bin && \
         env_load LD_LIBRARY_PATH $CUDA_HOME/lib64"
@@ -71,4 +65,18 @@ if [ -d "${VCPKG_HOME:-}" ]; then
     echo "[ENV-SETUP] VCPKG initialized from $VCPKG_HOME"
 else
     unset VCPKG_HOME
+fi
+
+if [ -d "${UV_HOME:-}" ]; then
+    alias LOAD_UV="env_load PATH $UV_HOME"
+    alias UNLOAD_UV="env_unload PATH $UV_HOME"
+    env_load PATH "$UV_HOME"
+    echo "[ENV-SETUP] UV initialized from $UV_HOME"
+    echo "|- Note: For managing shared UV cache directory:"
+    echo "|-   1. Export UV_CACHE_DIR to a target directory. (No need to create it first.)"
+    echo "|-   2. Run: \`sudo create-shared-dir <group> \${UV_CACHE_DIR}\`" 
+    echo "|-   3. For all users in <group>, make sure UV_CACHE_DIR is set properly."
+    echo "|-      You can add it to \${ENV_SETUP_FILE} for convenience."
+else
+    unset UV_HOME
 fi
