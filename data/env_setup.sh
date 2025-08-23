@@ -1,15 +1,12 @@
-set -e
-
 sed "s|\${IMAGE_NAME}|${IMAGE_NAME}|g" << 'EOF'
 ===============================================================================
-                 <-. (`-')_                ,-.  _(`-')              
-                    \( OO) )   <-.         / / ( (OO ).->    <-.    
-          <-.--. ,--./ ,--/  ,--. )       / /   \    .'_   ,--. )   
-        (`-'| ,| |   \ |  |  |  (`-')    / /    '`'-..__)  |  (`-') 
-        (OO |(_| |  . '|  |) |  |OO )   / /     |  |  ' |  |  |OO ) 
-       ,--. |  | |  |\    | (|  '__ |  / /      |  |  / : (|  '__ | 
-       |  '-'  / |  | \   |  |     |' / /       |  '-'  /  |     |' 
-        `-----'  `--'  `--'  `-----'  `-'       `------'   `-----'  
+        _____   ____  _____    _____          __  ______      _____     
+       |_   _| |_   \|_   _|  |_   _|        / / |_   _ `.   |_   _|    
+         | |     |   \ | |      | |         / /    | | `. \    | |      
+     _   | |     | |\ \| |      | |   _    / /     | |  | |    | |   _  
+    | |__' |    _| |_\   |_    _| |__/ |  / /     _| |_.' /   _| |__/ | 
+    `.____.'   |_____|\____|  |________| /_/     |______.'   |________| 
+                                                                    
 -------------------------------------------------------------------------------
 Image Name:    ${IMAGE_NAME}
 Creator:       jamesnulliu <jamesnulliu@gmail.com>
@@ -77,6 +74,7 @@ if [ -d "${UV_HOME:-}" ]; then
     echo "|-   2. Run: \`sudo create-shared-dir <group> \${UV_CACHE_DIR}\`" 
     echo "|-   3. For all users in <group>, make sure UV_CACHE_DIR is set properly."
     echo "|-      You can add it to \${ENV_SETUP_FILE} for convenience."
+    echo "|-   4. Remove this note from \${ENV_SETUP_FILE} if you want."
 else
     unset UV_HOME
 fi
