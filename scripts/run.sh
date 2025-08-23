@@ -15,22 +15,22 @@ if [ ! $CONTAINER_NAME ]; then
 fi
 
 if [[ "$IMAGE_NAME" == *"cuda"* ]]; then
-docker run -td \
-    --name $CONTAINER_NAME \
-    --gpus all \
-    --network=host \
-    --shm-size=16G \
-    --hostname $CONTAINER_NAME \
-    -v $HOME/Projects:/root/Projects \
-    $IMAGE_NAME
+    docker run -td \
+        --name $CONTAINER_NAME \
+        --gpus all \
+        --network=host \
+        --shm-size=16G \
+        --hostname $CONTAINER_NAME \
+        -v /home:/home \
+        $IMAGE_NAME
 else
-docker run -td \
-    --name $CONTAINER_NAME \
-    --network=host \
-    --shm-size=16G \
-    --hostname $CONTAINER_NAME \
-    -v $HOME/Projects:/root/Projects \
-    $IMAGE_NAME
+    docker run -td \
+        --name $CONTAINER_NAME \
+        --network=host \
+        --shm-size=16G \
+        --hostname $CONTAINER_NAME \
+        -v /home:/home \
+        $IMAGE_NAME
 fi
 
 docker cp $HOME/.ssh $CONTAINER_NAME:/root/
