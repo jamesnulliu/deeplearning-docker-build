@@ -1,3 +1,4 @@
+# @ https://patorjk.com/software/taag/?p=display&f=Varsity&t=JNL%2FDL&x=none
 sed "s|\${IMAGE_NAME}|${IMAGE_NAME}|g" << 'EOF'
 ===============================================================================
         _____   ____  _____    _____          __  ______      _____     
@@ -8,9 +9,9 @@ sed "s|\${IMAGE_NAME}|${IMAGE_NAME}|g" << 'EOF'
     `.____.'   |_____|\____|  |________| /_/     |______.'   |________| 
                                                                     
 -------------------------------------------------------------------------------
-Image Name:    ${IMAGE_NAME}
-Creator:       jamesnulliu <jamesnulliu@gmail.com>
-License:       MIT
+Image Name:  ${IMAGE_NAME}
+Creator:     JamesNULLiu <jamesnulliu@gmail.com>
+License:     MIT
 ===============================================================================
 EOF
 
@@ -71,10 +72,14 @@ if [ -d "${UV_HOME:-}" ]; then
     echo "[ENV-SETUP] UV initialized from $UV_HOME"
     echo "|- Note: For managing shared UV cache directory:"
     echo "|-   1. Export UV_CACHE_DIR to a target directory. (No need to create it first.)"
-    echo "|-   2. Run: \`sudo create-shared-dir <group> \${UV_CACHE_DIR}\`" 
-    echo "|-   3. For all users in <group>, make sure UV_CACHE_DIR is set properly."
+    echo "|-   2. Run: \`sudo create-shared-dir <group> \${UV_CACHE_DIR}\` ONLY ONCE." 
+    echo "|-   3. For all users in <group>, make sure UV_CACHE_DIR is exported properly."
     echo "|-      You can add it to \${ENV_SETUP_FILE} for convenience."
     echo "|-   4. Remove this note from \${ENV_SETUP_FILE} if you want."
+
+    ## You can uncomment the following line to set a shared cache dir for UV.
+    ## Make sure to run `sudo create-shared-dir <group> $UV_CACHE_DIR` ONLY ONCE.
+    # export UV_CACHE_DIR="$UV_HOME/.cache"
 else
     unset UV_HOME
 fi
