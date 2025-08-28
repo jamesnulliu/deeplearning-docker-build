@@ -51,10 +51,10 @@ RUN wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
     apt-get update && apt-get install -y \
     clang-${LLVM_VERSION}         lldb-${LLVM_VERSION} \
     clang-tools-${LLVM_VERSION}   libclang-${LLVM_VERSION}-dev \
-    clang-format-${LLVM_VERSION}  python3-clang-${LLVM_VERSION} \
+    clang-format-${LLVM_VERSION}  libomp-${LLVM_VERSION}-dev \
     clangd-${LLVM_VERSION}        clang-tidy-${LLVM_VERSION} \
     lldb-${LLVM_VERSION}          libc++-${LLVM_VERSION}-dev \
-    libc++abi-${LLVM_VERSION}-dev libomp-${LLVM_VERSION}-dev && \
+    libc++abi-${LLVM_VERSION}-dev && \
     ln -s /usr/bin/clang-${LLVM_VERSION}         /usr/bin/clang && \
     ln -s /usr/bin/clang++-${LLVM_VERSION}       /usr/bin/clang++ && \
     ln -s /usr/bin/clangd-${LLVM_VERSION}        /usr/bin/clangd && \
@@ -66,7 +66,7 @@ RUN wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Config files
-COPY data/vimrc /etc/vim/vimrc
+COPY data/vimrc.local /etc/vim/vimrc.local
 COPY data/env_setup.sh ${ENV_SETUP_FILE}
 COPY data/.inputrc data/.bashrc data/.tmux.conf /root/
 COPY data/.inputrc data/.bashrc data/.tmux.conf /etc/skel/

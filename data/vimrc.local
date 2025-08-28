@@ -1,0 +1,37 @@
+au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+
+set showcmd             " Show (partial) command in status line.
+set showmatch           " Show matching brackets.
+set ignorecase          " Do case insensitive matching
+set smartcase           " Do smart case matching
+set incsearch           " Incremental search
+set autowrite           " Automatically save before commands like :next and :make
+set hidden              " Hide buffers when they are abandoned
+set mouse=a             " Enable mouse usage (all modes)
+
+set number
+set cursorline
+" set cursorcolumn
+set shiftwidth=4
+set tabstop=4
+set expandtab
+set scrolloff=10
+set showmode
+set hlsearch
+
+set autoindent
+set smartindent
+set cindent
+filetype indent on
+
+augroup numbertoggle
+  autocmd!
+  autocmd BufEnter,FocusGained,InsertLeave,WinEnter * if &nu && mode() != "i" | set rnu   | endif
+  autocmd BufLeave,FocusLost,InsertEnter,WinLeave   * if &nu                  | set nornu | endif
+augroup END
+
+" Set the menu & message to English
+set langmenu=en_US
+let $LANG='en_US'
+source $VIMRUNTIME/delmenu.vim
+source $VIMRUNTIME/menu.vim
