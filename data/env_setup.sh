@@ -70,23 +70,23 @@ if [ -d "${UV_HOME:-}" ]; then
     alias UNLOAD_UV="env_unload PATH $UV_HOME"
     env_load PATH "$UV_HOME"
     echo "[ENV-SETUP] UV initialized from $UV_HOME"
-    cat << 'EOF'
-|- NOTE: For managing shared UV cache and python directory:
-|-   1. Export UV_CACHE_DIR and UV_PYTHON_INSTALL_DIR to a target directory. 
-|       (No need to create them first.)
-|-   2. Run command below ONLY ONCE to create the shared directories: 
-|       $ create-shared-dir <group> ${UV_CACHE_DIR} ${UV_PYTHON_INSTALL_DIR}
-|-   3. For all users in <group>, make sure UV_CACHE_DIR and 
-|       UV_PYTHON_INSTALL_DIR are exported properly.
-|       You can do this in ${ENV_SETUP_FILE} for convenience.
-|-   4. Remove this NOTE from ${ENV_SETUP_FILE} if you want.
-EOF
     ## You can uncomment the following line to set a shared cache dir for UV.
     ## Make sure to run `sudo create-shared-dir <group> $UV_CACHE_DIR` ONLY ONCE.
     # export UV_CACHE_DIR="$UV_HOME/.cache"
     # export UV_PYTHON_INSTALL_DIR="$UV_HOME/python"
-    echo "|-          UV_CACHE_DIR: ${UV_CACHE_DIR:-<not set>}"
-    echo "|-          UV_PYTHON_INSTALL_DIR: ${UV_PYTHON_INSTALL_DIR:-<not set>}"
+    echo "            |- UV_CACHE_DIR: ${UV_CACHE_DIR:-<not set>}"
+    echo "            |- UV_PYTHON_INSTALL_DIR: ${UV_PYTHON_INSTALL_DIR:-<not set>}"
+    cat << 'EOF'
+   NOTE: For managing shared UV cache and python directory:
+     1. Export UV_CACHE_DIR and UV_PYTHON_INSTALL_DIR to a target directory. 
+        (No need to create them first.)
+     2. Run command below ONLY ONCE to create the shared directories: 
+        $ create-shared-dir <group> ${UV_CACHE_DIR} ${UV_PYTHON_INSTALL_DIR}
+     3. For all users in <group>, make sure UV_CACHE_DIR and 
+        UV_PYTHON_INSTALL_DIR are exported properly.
+        You can do this in ${ENV_SETUP_FILE} for convenience.
+     4. Remove this NOTE from ${ENV_SETUP_FILE} if you want.
+EOF
 else
     unset UV_HOME
 fi

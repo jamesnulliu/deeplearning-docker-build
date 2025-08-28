@@ -21,16 +21,22 @@ set -e
 #
 # ==============================================================================
 
-# --- Argument Parsing ---
-SHARED_GROUP="$1"
-shift # Shift arguments so $@ contains only the directories
-TARGET_DIRS=("$@")
-
 # --- Input Validation ---
-if [ ${#TARGET_DIRS[@]} -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    echo "Usage: $0 <shared_group> <dir1> [<dir2> ...]"
+if [ $# -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    echo "Usage: $0 <user_group> <dir1> [<dir2> ...]"
     exit 1
 fi
+
+if [ $# -lt 2 ]; then
+    echo "Error: Missing directory arguments."
+    echo "Usage: $0 <user_group> <dir1> [<dir2> ...]"
+    exit 1
+fi
+
+# --- Argument Parsing ---
+USER_GROUP="$1"
+shift
+TARGET_DIRS=("$@")
 
 # --- Pre-flight Checks ---
 # 1. Check for root privileges.
@@ -40,22 +46,22 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # 2. Check if the specified group exists.
-if ! getent group "$SHARED_GROUP" > /dev/null; then
-    echo "Error: Group '$SHARED_GROUP' does not exist." >&2
+if ! getent group "$USER_GROUP" > /dev/null; then
+    echo "Error: Group '$USER_GROUP' does not exist." >&2
     exit 1
 fi
 
 # --- Main Logic ---
-echo "Configuring shared directories for group '$SHARED_GROUP'..."
+echo "Configuring shared directories for group '$USER_GROUP'..."
 
 for target_dir in "${TARGET_DIRS[@]}"; do
     echo "--> Processing: $target_dir"
     mkdir -p "$target_dir"
-    chgrp -R "$SHARED_GROUP" "$target_dir"
+    chgrp -R "$USER_GROUP" "$target_dir"
     chmod -R g=rwX,o-rwx "$target_dir"
     find "$target_dir" -type d -exec chmod g+s {} +
-    setfacl -R -m "g:$SHARED_GROUP:rwX" "$target_dir"
-    setfacl -R -d -m "g:$SHARED_GROUP:rwX" "$target_dir"
+    setfacl -R -m "g:$USER_GROUP:rwX" "$target_dir"
+    setfacl -R -d -m "g:$USER_GROUP:rwX" "$target_dir"
 done
 
 echo "Configuration complete."

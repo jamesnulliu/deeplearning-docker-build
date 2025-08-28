@@ -77,7 +77,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | \
         env UV_INSTALL_DIR="${UV_HOME}" UV_NO_MODIFY_PATH=1 sh
 
 # Some final steps
-RUN apt-get update && apt-get upgrade -y && apt-get autoremove -y && \
+RUN apt-get update && apt-get upgrade -y && \
+    # Remove system python3.12, force to use uv managed python
+    apt-get remove -y python3 python3.12 && \
+    apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     git config --system --unset-all user.name  || true && \
     git config --system --unset-all user.email || true && \
