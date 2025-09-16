@@ -16,10 +16,12 @@ LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
 LABEL version=${IMAGE_VERSION}
 
 ENV IMAGE_NAME=${IMAGE_NAME}
+ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
 ENV VCPKG_ROOT=/opt/vcpkg
 ENV VCPKG_HOME=/opt/vcpkg
 ENV UV_HOME=/opt/uv
-ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
 
 SHELL ["/bin/bash", "-c"]
 
@@ -62,15 +64,14 @@ RUN wget -O /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
     ln -s /usr/bin/clang-format-${LLVM_VERSION}  /usr/bin/clang-format && \
     ln -s /usr/bin/lldb-${LLVM_VERSION}          /usr/bin/lldb 
 
-# Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 # Config files
 COPY data/vimrc.local /etc/vim/vimrc.local
 COPY data/env_setup.sh ${ENV_SETUP_FILE}
 COPY data/.inputrc data/.bashrc data/.tmux.conf /root/
 COPY data/.inputrc data/.bashrc data/.tmux.conf /etc/skel/
-COPY data/create-shared-dir /usr/local/bin/
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | \
@@ -78,8 +79,6 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | \
 
 # Some final steps
 RUN apt-get update && apt-get upgrade -y && \
-    # Remove system python3.12, force to use uv managed python
-    apt-get remove -y python3 python3.12 && \
     apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     git config --system --unset-all user.name  || true && \

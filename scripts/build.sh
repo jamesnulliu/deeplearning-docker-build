@@ -1,5 +1,3 @@
-#!/bin/bash
-
 set -e 
 
 DOCKER_FILE=$1

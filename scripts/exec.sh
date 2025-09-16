@@ -1,5 +1,3 @@
-#!/bin/bash
-
 CONTAINER_NAME=$1
 
 if [ ! $CONTAINER_NAME ]; then
