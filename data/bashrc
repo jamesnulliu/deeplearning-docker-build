@@ -102,4 +102,7 @@ fi
 #    . /etc/bash_completion
 #fi
 
-source $ENV_SETUP_FILE
+# The container toolchain environment ($ENV_SETUP_FILE) is auto-sourced
+# system-wide via /etc/bash.bashrc and /etc/profile.d, for every user, so it is
+# intentionally not sourced here. To load it manually: 
+# source "$ENV_SETUP_FILE"

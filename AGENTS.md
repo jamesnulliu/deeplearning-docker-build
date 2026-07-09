@@ -12,7 +12,10 @@ Use the scripts rather than calling long `docker` commands by hand.
 - `bash ./scripts/next-version.sh --minor --push` or `--major --push`: same release flow for larger version bumps.
 - `bash ./scripts/run.sh -i jamesnulliu/deeplearning:v2.4.7-cuda12.8.0 --tmp`: start an interactive temporary container.
 - `bash ./scripts/run.sh -i <image> -c devbox`: start a named long-lived container.
-- `bash ./scripts/exec.sh devbox`: open a shell in an existing container.
+- `bash ./scripts/run.sh -i <image> --root -c devbox`: start it as root (legacy) instead of the host user.
+- `bash ./scripts/exec.sh devbox`: open a shell as the host user; add `--root` for a root shell.
+
+By default `run.sh`/`exec.sh` run the container as the invoking host user (same UID/GID and primary group), mounting `/etc/passwd` and `/etc/group` read-only and the host `/home`, so identities, dotfiles, and `~/.ssh` resolve without a root copy. The toolchain env (`$ENV_SETUP_FILE`) is auto-sourced system-wide for every interactive shell. Per-user helpers defined there: `INSTALL_VCPKG`, `INSTALL_AI_CLI` (codex + claude into a personal npm prefix), and `ADOPT_DEFAULT_CONFIGS` (copy the `CONTAINER_DEFAULT_*` dotfiles into `$HOME`).
 
 ## Coding Style & Naming Conventions
 Keep Dockerfiles and shell scripts POSIX/Bash-friendly, with one logical step per block and consistent four-space indentation for wrapped commands. Prefer uppercase variable names for exported build configuration (`IMAGE_VERSION`, `CUDA_VERSION`) and lowercase filenames for scripts and data assets. When you change a version, update `scripts/image-configs.sh` first so tags stay consistent. For releases, prefer `scripts/next-version.sh` so the version bump, commit, tag, and push happen in one place.

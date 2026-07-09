@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-if [ -n "${TZ:-}" ] && [ -f "/usr/share/zoneinfo/${TZ}" ]; then
+# Writing /etc/localtime and /etc/timezone needs root. When the container runs as
+# the host user, skip it -- libc already honors the TZ environment variable.
+if [ "$(id -u)" -eq 0 ] && [ -n "${TZ:-}" ] && [ -f "/usr/share/zoneinfo/${TZ}" ]; then
   ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime
   echo "${TZ}" > /etc/timezone
 fi

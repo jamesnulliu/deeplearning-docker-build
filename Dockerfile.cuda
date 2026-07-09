@@ -15,11 +15,12 @@ LABEL version=${IMAGE_VERSION}
 ENV IMAGE_NAME=${IMAGE_NAME}
 ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
 ENV CUDA_HOME=/usr/local/cuda
-ENV VCPKG_ROOT=/opt/vcpkg
-ENV VCPKG_HOME=/opt/vcpkg
 ENV UV_HOME=/opt/uv
-ENV CARGO_HOME=/usr/local/cargo
 ENV RUSTUP_HOME=/usr/local/rustup
+ENV CONTAINER_DEFAULT_BASHRC=/etc/container-defaults/bashrc
+ENV CONTAINER_DEFAULT_BASH_PROFILE=/etc/container-defaults/bash_profile
+ENV CONTAINER_DEFAULT_INPUTRC=/etc/container-defaults/inputrc
+ENV CONTAINER_DEFAULT_TMUX_CONF=/etc/container-defaults/tmux.conf
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -27,8 +28,19 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 COPY data/install-common.sh /usr/local/bin/install-common.sh
 COPY data/vimrc.local /etc/vim/vimrc.local
 COPY data/env_setup.sh ${ENV_SETUP_FILE}
-COPY data/.inputrc data/.bashrc data/.tmux.conf data/.bash_profile /root/
-COPY data/.inputrc data/.bashrc data/.tmux.conf data/.bash_profile /etc/skel/
+
+# Container default dotfiles. Users keep their own home configs by default and
+# can opt in via ADOPT_DEFAULT_CONFIGS or the CONTAINER_DEFAULT_* env vars.
+COPY data/bashrc ${CONTAINER_DEFAULT_BASHRC}
+COPY data/bash_profile ${CONTAINER_DEFAULT_BASH_PROFILE}
+COPY data/inputrc ${CONTAINER_DEFAULT_INPUTRC}
+COPY data/tmux.conf ${CONTAINER_DEFAULT_TMUX_CONF}
+
+# Seed root's home from the same defaults for --root mode.
+RUN cp "${CONTAINER_DEFAULT_BASHRC}" /root/.bashrc && \
+    cp "${CONTAINER_DEFAULT_BASH_PROFILE}" /root/.bash_profile && \
+    cp "${CONTAINER_DEFAULT_INPUTRC}" /root/.inputrc && \
+    cp "${CONTAINER_DEFAULT_TMUX_CONF}" /root/.tmux.conf
 
 RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \
@@ -36,11 +48,6 @@ RUN chmod +x /usr/local/bin/install-common.sh && \
 
 COPY data/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
-
-COPY data/install-ai-cli.sh /usr/local/bin/install-ai-cli.sh
-RUN chmod +x /usr/local/bin/install-ai-cli.sh && \
-    /usr/local/bin/install-ai-cli.sh && \
-    rm -f /usr/local/bin/install-ai-cli.sh
 
 ENTRYPOINT [ "entrypoint.sh" ]
 CMD [ "bash" ]

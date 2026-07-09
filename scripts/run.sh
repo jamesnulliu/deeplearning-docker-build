@@ -8,6 +8,7 @@ TMP="false"
 PROXY_URL=""
 SYS_ADMIN="false"
 TIME_ZONE=""
+ROOT_MODE="false"
 GPU_ARGS=()
 
 print_help() {
@@ -16,10 +17,16 @@ Usage: ./scripts/run.sh [options]
 
 Run a container from an existing image.
 
+By default the container runs as the invoking host user (same UID/GID and group),
+with /etc/passwd and /etc/group mounted read-only so names, home, and groups
+resolve. Your host home is mounted at /home, so ~/.ssh and dotfiles are already
+present. Use --root to run as root instead (legacy behavior).
+
 Options:
   -i, --image-name <name>        Docker image to run. Required.
   -c, --container-name <name>    Container name. Defaults to tmp.
   --tmp                          Run interactively and remove the container on exit.
+  --root                         Run as root instead of the host user.
   --proxy <url>                  Set http_proxy, https_proxy, and all_proxy.
   --sys-admin                    Add SYS_ADMIN capability and disable seccomp and apparmor.
   --gpus <value>                 Override GPU request, for example: all.
@@ -63,6 +70,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --sys-admin)
             SYS_ADMIN="true"
+            shift
+            ;;
+        --root)
+            ROOT_MODE="true"
             shift
             ;;
         --gpus)
@@ -128,6 +139,21 @@ else
     TZ_ARGS=()
 fi
 
+if [[ "${ROOT_MODE}" == "true" ]]; then
+    USER_ARGS=()
+else
+    # Run as the host user: mount the host user/group databases read-only so
+    # names, home, and groups resolve, and pass HOME/USER explicitly so even
+    # non-login shells (docker exec) land in the right home.
+    USER_ARGS=(
+        -u "$(id -u):$(id -g)"
+        -v /etc/passwd:/etc/passwd:ro
+        -v /etc/group:/etc/group:ro
+        -e "HOME=${HOME}"
+        -e "USER=$(id -un)"
+    )
+fi
+
 DOCKER_RUN_ARGS=(
     --name "${CONTAINER_NAME}"
     --network host
@@ -137,6 +163,7 @@ DOCKER_RUN_ARGS=(
 )
 
 DOCKER_RUN_ARGS+=(
+    "${USER_ARGS[@]}"
     "${PROXY_ARGS[@]}"
     "${SYS_ADMIN_ARGS[@]}"
     "${GPU_ARGS[@]}"
@@ -147,7 +174,9 @@ if [[ "${TMP}" == "true" ]]; then
     docker run -it --rm "${DOCKER_RUN_ARGS[@]}" "${IMAGE_NAME}" /bin/bash
 else
     docker run -td "${DOCKER_RUN_ARGS[@]}" "${IMAGE_NAME}"
-    if [[ -d "${HOME}/.ssh" ]]; then
+    # In root mode the host home is not the container home, so copy ~/.ssh into
+    # /root. In host-user mode the mounted home already contains ~/.ssh.
+    if [[ "${ROOT_MODE}" == "true" ]] && [[ -d "${HOME}/.ssh" ]]; then
         docker cp "${HOME}/.ssh" "${CONTAINER_NAME}:/root/"
         docker exec "${CONTAINER_NAME}" chown -R root:root /root/.ssh
     fi
