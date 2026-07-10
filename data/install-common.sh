@@ -48,6 +48,7 @@ apt-get install -y --no-install-recommends \
     npm \
     pkg-config \
     openssh-client \
+    sudo \
     ccache \
     build-essential \
     gdb \
@@ -109,25 +110,18 @@ ln -sf /usr/local/cargo/bin/* /usr/local/bin/
 curl -LsSf https://astral.sh/uv/install.sh | \
     env UV_INSTALL_DIR="${UV_HOME}" UV_NO_MODIFY_PATH=1 sh
 
-# Auto-source the container env-setup script for every interactive bash shell,
-# for any user, without touching their personal dotfiles. env_setup.sh guards
-# itself against double-sourcing within a single shell process.
-ENV_SETUP_HOOK="$(cat <<'HOOK'
+# The container toolchain environment ($ENV_SETUP_FILE) is sourced from the
+# user's own seeded ~/.bashrc (data/bashrc), not from a root-owned system file,
+# so it stays inspectable and editable per user. See entrypoint.sh for the
+# one-time, copy-if-missing seeding into each user's workspace home.
 
-# Auto-load the container toolchain environment (added by install-common.sh).
-if [ -n "${BASH_VERSION:-}" ] && [ -n "${ENV_SETUP_FILE:-}" ] && [ -r "${ENV_SETUP_FILE}" ]; then
-    . "${ENV_SETUP_FILE}"
-fi
-HOOK
-)"
-
-# Login shells (/etc/profile -> /etc/profile.d/*.sh).
-printf '%s\n' "${ENV_SETUP_HOOK}" > /etc/profile.d/00-env-setup.sh
-chmod 0644 /etc/profile.d/00-env-setup.sh
-
-# Interactive non-login shells (e.g. `docker exec -it <ctr> bash`). Ubuntu's
-# /etc/bash.bashrc returns early for non-interactive shells, so scripts are safe.
-printf '%s\n' "${ENV_SETUP_HOOK}" >> /etc/bash.bashrc
+# Passwordless sudo for whichever host user/uid the container resolves to via
+# the bind-mounted /etc/passwd -- the image is built once but run as different
+# host users at runtime, so a fixed username can't be baked in here.
+install -d -m 0755 /etc/sudoers.d
+printf '%s\n' 'ALL ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nopasswd-all
+chmod 0440 /etc/sudoers.d/nopasswd-all
+visudo -cf /etc/sudoers.d/nopasswd-all
 
 apt-get autoremove -y
 apt-get clean

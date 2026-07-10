@@ -9,6 +9,7 @@ PROXY_URL=""
 SYS_ADMIN="false"
 TIME_ZONE=""
 ROOT_MODE="false"
+WORKSPACE_HOME=""
 GPU_ARGS=()
 
 print_help() {
@@ -17,16 +18,22 @@ Usage: ./scripts/run.sh [options]
 
 Run a container from an existing image.
 
-By default the container runs as the invoking host user (same UID/GID and group),
-with /etc/passwd and /etc/group mounted read-only so names, home, and groups
-resolve. Your host home is mounted at /home, so ~/.ssh and dotfiles are already
-present. Use --root to run as root instead (legacy behavior).
+By default the container runs as the invoking host user (same UID/GID and full
+group list), with /etc/passwd and /etc/group mounted read-only so names and
+groups resolve. HOME points at an isolated per-user workspace directory
+(default ~/.dl-workspace) instead of your real host home, so container-side
+dotfile changes never touch your real ~/.bashrc etc. It is seeded on first use
+and never re-seeded or clobbered afterward. ~/.ssh and ~/.gitconfig are
+symlinked in automatically. Your host /home is still mounted at /home for
+general file access. Use --root to run as root instead (legacy behavior).
 
 Options:
   -i, --image-name <name>        Docker image to run. Required.
   -c, --container-name <name>    Container name. Defaults to tmp.
   --tmp                          Run interactively and remove the container on exit.
   --root                         Run as root instead of the host user.
+  --workspace-home <path>        Override the host-user workspace directory. Defaults to
+                                  ~/.dl-workspace.
   --proxy <url>                  Set http_proxy, https_proxy, and all_proxy.
   --sys-admin                    Add SYS_ADMIN capability and disable seccomp and apparmor.
   --gpus <value>                 Override GPU request, for example: all.
@@ -75,6 +82,14 @@ while [[ $# -gt 0 ]]; do
         --root)
             ROOT_MODE="true"
             shift
+            ;;
+        --workspace-home)
+            if [[ $# -lt 2 ]]; then
+                echo "[run.sh] ERROR: Missing value for --workspace-home." >&2
+                exit 1
+            fi
+            WORKSPACE_HOME="$2"
+            shift 2
             ;;
         --gpus)
             if [[ $# -lt 2 ]]; then
@@ -141,17 +156,43 @@ fi
 
 if [[ "${ROOT_MODE}" == "true" ]]; then
     USER_ARGS=()
+    WORKSPACE_ARGS=()
 else
+    # Isolate HOME from the real host home: point it at a per-user workspace
+    # directory instead, seeded once (idempotently) by entrypoint.sh. Recreating
+    # the container against the same workspace dir never re-seeds or clobbers
+    # accumulated state (vcpkg, npm-global CLIs, history, hand-edited dotfiles),
+    # since it is a plain host directory that outlives `docker rm`.
+    WORKSPACE_HOME="${WORKSPACE_HOME:-${HOME}/.dl-workspace}"
+    # Docker creates a missing bind-mount source as root, which the mapped
+    # non-root uid then can't write into -- create it ourselves first.
+    mkdir -p "${WORKSPACE_HOME}"
+
     # Run as the host user: mount the host user/group databases read-only so
-    # names, home, and groups resolve, and pass HOME/USER explicitly so even
-    # non-login shells (docker exec) land in the right home.
+    # names and groups resolve, and pass HOME/USER explicitly so even
+    # non-login shells (docker exec) land in the workspace home.
     USER_ARGS=(
         -u "$(id -u):$(id -g)"
         -v /etc/passwd:/etc/passwd:ro
         -v /etc/group:/etc/group:ro
-        -e "HOME=${HOME}"
+        -e "HOME=${WORKSPACE_HOME}"
         -e "USER=$(id -un)"
     )
+    # `-u uid:gid` only sets the primary group; Docker never derives
+    # supplementary groups from it. Add every host group explicitly (re-adding
+    # the primary gid is harmless, so don't bother deduping it).
+    for gid in $(id -G); do
+        USER_ARGS+=(--group-add "${gid}")
+    done
+
+    # The default workspace lives under the real $HOME, already covered by the
+    # -v /home:/home mount below; only add an explicit mount if overridden to
+    # somewhere outside /home.
+    if [[ "${WORKSPACE_HOME}" == "/home" || "${WORKSPACE_HOME}" == /home/* ]]; then
+        WORKSPACE_ARGS=()
+    else
+        WORKSPACE_ARGS=(-v "${WORKSPACE_HOME}:${WORKSPACE_HOME}")
+    fi
 fi
 
 DOCKER_RUN_ARGS=(
@@ -164,6 +205,7 @@ DOCKER_RUN_ARGS=(
 
 DOCKER_RUN_ARGS+=(
     "${USER_ARGS[@]}"
+    "${WORKSPACE_ARGS[@]}"
     "${PROXY_ARGS[@]}"
     "${SYS_ADMIN_ARGS[@]}"
     "${GPU_ARGS[@]}"

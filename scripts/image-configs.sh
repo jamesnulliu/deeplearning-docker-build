@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-IMAGE_VERSION=2.6.0
+IMAGE_VERSION=2.7.0
 CUDA_VERSION=12.8.0
 UBUNTU_VERSION=24.04
 LLVM_VERSION=20
@@ -75,7 +75,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         resolve_image_name "${docker_file}"
     else
         cat <<EOF
-IMAGE_VERSION=2.6.0
+IMAGE_VERSION=2.7.0
 CUDA_VERSION=${CUDA_VERSION}
 UBUNTU_VERSION=${UBUNTU_VERSION}
 LLVM_VERSION=${LLVM_VERSION}

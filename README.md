@@ -4,11 +4,20 @@ Dockerfiles, data and build scripts for creating and maintaining the jamesnulliu
 ## Running as your host user
 
 By default `scripts/run.sh` and `scripts/exec.sh` run the container as the
-**invoking host user** — same UID/GID and primary group as on the host — rather
-than root. The host user and group databases (`/etc/passwd`, `/etc/group`) are
-mounted read-only and the host `/home` is mounted in, so your username, home,
-groups, dotfiles, and `~/.ssh` all resolve inside the container, and files you
-create keep your host ownership.
+**invoking host user** — same UID/GID and full group list as on the host —
+rather than root. The host user and group databases (`/etc/passwd`,
+`/etc/group`) are mounted read-only so your username and groups resolve, and
+files you create keep your host ownership. Passwordless `sudo` is available if
+you need root for a one-off command.
+
+`$HOME` inside the container is an **isolated workspace directory**, not your
+real host home — default `~/.dl-workspace`, override with `--workspace-home`.
+It's a plain host directory (so it survives `docker rm`/recreate just like the
+rest of your files), seeded once on first use with the container's default
+dotfiles, and never re-seeded or clobbered afterward — container-side changes
+never touch your real `~/.bashrc` etc. `~/.ssh` and `~/.gitconfig` are
+symlinked in automatically from your real host home so git/ssh keep working.
+Your host `/home` is still mounted at `/home` for general file access.
 
 ```bash
 # Run as yourself (default):
@@ -20,8 +29,9 @@ bash ./scripts/run.sh -i <image> --root -c devbox
 bash ./scripts/exec.sh devbox --root
 ```
 
-The container toolchain environment is auto-sourced for every interactive shell
-(you can also `source "$ENV_SETUP_FILE"` manually). It prints every environment
+The container toolchain environment is sourced from your workspace's own
+`~/.bashrc` (seeded on first use, so it's a file you own and can edit or
+remove) — not from a root-owned system file. It prints every environment
 variable it touches so you always know what is set.
 
 State/cache/root directories are **intentionally not defaulted** — you set them
@@ -38,9 +48,10 @@ the matching helper:
   unless you set `CARGO_HOME` to relocate its state and add its bin dir to `PATH`.
 - `UV_CACHE_DIR` / `UV_PYTHON_INSTALL_DIR` (optional) — override uv's own defaults.
 
-`ADOPT_DEFAULT_CONFIGS` copies the container default dotfiles (exposed as
+`ADOPT_DEFAULT_CONFIGS` re-syncs the container default dotfiles (exposed as
 `CONTAINER_DEFAULT_BASHRC`, `CONTAINER_DEFAULT_INPUTRC`,
-`CONTAINER_DEFAULT_TMUX_CONF`, `CONTAINER_DEFAULT_BASH_PROFILE`) into your home,
-backing up any existing files to `*.bak`. Your own configs are left untouched
-unless you run this.
+`CONTAINER_DEFAULT_TMUX_CONF`, `CONTAINER_DEFAULT_BASH_PROFILE`) into your
+workspace home, backing up any existing files to `*.bak`. Your workspace is
+already seeded once automatically on first use; run this only when you
+deliberately want to pull in updated shipped defaults later.
 

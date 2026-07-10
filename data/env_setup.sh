@@ -59,8 +59,12 @@ env_unload() {
     export $var_name=$(IFS=:; echo "${new_paths[*]}")
 }
 
-# @brief Copy the container default dotfiles into $HOME. Existing files are
-#        backed up to "<file>.bak" first, so your own configs are never lost.
+# @brief Re-sync the container default dotfiles into $HOME, e.g. after the
+#        image's shipped defaults change. Your workspace home is already
+#        seeded once automatically at container start (see entrypoint.sh);
+#        this is for deliberately pulling in updated defaults afterward.
+#        Existing files are backed up to "<file>.bak" first, so your own
+#        edits are never lost.
 ADOPT_DEFAULT_CONFIGS() {
     local pair src dst
     for pair in \
@@ -203,7 +207,8 @@ fi
 # ---------------------------------------------------------------------------
 # Container default dotfiles (copy into your home to adopt them).
 # ---------------------------------------------------------------------------
-echo "[ENV-SETUP] Container default configs (run 'ADOPT_DEFAULT_CONFIGS' to copy into \$HOME):"
+echo "[ENV-SETUP] Container default configs (already seeded into \$HOME on first use;"
+echo "            run 'ADOPT_DEFAULT_CONFIGS' to re-sync updated defaults later):"
 echo "            |- CONTAINER_DEFAULT_BASHRC:       ${CONTAINER_DEFAULT_BASHRC:-<not set>}"
 echo "            |- CONTAINER_DEFAULT_BASH_PROFILE: ${CONTAINER_DEFAULT_BASH_PROFILE:-<not set>}"
 echo "            |- CONTAINER_DEFAULT_INPUTRC:      ${CONTAINER_DEFAULT_INPUTRC:-<not set>}"
