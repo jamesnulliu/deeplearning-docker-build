@@ -12,7 +12,6 @@ Environment:
   LLVM_VERSION          LLVM major version to install. Required.
   UV_HOME               Target directory for uv. Required.
   RUSTUP_HOME           Shared Rust toolchain store, for example /usr/local/rustup. Required.
-  ENV_SETUP_FILE        Path to the container env-setup script to auto-source. Required.
   TZ                    Optional timezone name to configure, for example Etc/UTC.
 EOF
 }
@@ -110,10 +109,13 @@ ln -sf /usr/local/cargo/bin/* /usr/local/bin/
 curl -LsSf https://astral.sh/uv/install.sh | \
     env UV_INSTALL_DIR="${UV_HOME}" UV_NO_MODIFY_PATH=1 sh
 
-# The container toolchain environment ($ENV_SETUP_FILE) is sourced from the
-# user's own seeded ~/.bashrc (data/bashrc), not from a root-owned system file,
-# so it stays inspectable and editable per user. See entrypoint.sh for the
-# one-time, copy-if-missing seeding into each user's workspace home.
+# The container toolchain environment ($ENV_SETUP_FILE) is sourced from
+# data/bashrc, which is the only file entrypoint.sh seeds automatically (the
+# minimum needed for bash to have any hook at all in a fresh workspace home).
+# Everything else -- the user's own persistent env_setup.sh copy, the other
+# dotfiles, ~/.ssh/~/.gitconfig linking -- is opt-in via ADOPT_DEFAULT_CONFIGS
+# and LINK_HOST_IDENTITY, both defined in data/env_setup.sh and surfaced in
+# the seeded ~/.bashrc's startup banner.
 
 # Passwordless sudo for whichever host user/uid the container resolves to via
 # the bind-mounted /etc/passwd -- the image is built once but run as different

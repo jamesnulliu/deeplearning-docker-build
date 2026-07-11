@@ -13,20 +13,20 @@ LABEL maintainer="JamesNULLiu jamesnulliu@gmail.com"
 LABEL version=${IMAGE_VERSION}
 
 ENV IMAGE_NAME=${IMAGE_NAME}
-ENV ENV_SETUP_FILE=/etc/local/env_setup.sh
 ENV UV_HOME=/opt/uv
 ENV RUSTUP_HOME=/usr/local/rustup
 ENV CONTAINER_DEFAULT_BASHRC=/etc/container-defaults/bashrc
 ENV CONTAINER_DEFAULT_BASH_PROFILE=/etc/container-defaults/bash_profile
 ENV CONTAINER_DEFAULT_INPUTRC=/etc/container-defaults/inputrc
 ENV CONTAINER_DEFAULT_TMUX_CONF=/etc/container-defaults/tmux.conf
+ENV CONTAINER_DEFAULT_ENV_SETUP=/etc/container-defaults/env_setup.sh
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Config files
 COPY data/install-common.sh /usr/local/bin/install-common.sh
 COPY data/vimrc.local /etc/vim/vimrc.local
-COPY data/env_setup.sh ${ENV_SETUP_FILE}
+COPY data/env_setup.sh ${CONTAINER_DEFAULT_ENV_SETUP}
 
 # Container default dotfiles. Users keep their own home configs by default and
 # can opt in via ADOPT_DEFAULT_CONFIGS or the CONTAINER_DEFAULT_* env vars.
@@ -35,11 +35,9 @@ COPY data/bash_profile ${CONTAINER_DEFAULT_BASH_PROFILE}
 COPY data/inputrc ${CONTAINER_DEFAULT_INPUTRC}
 COPY data/tmux.conf ${CONTAINER_DEFAULT_TMUX_CONF}
 
-# Seed root's home from the same defaults for --root mode.
-RUN cp "${CONTAINER_DEFAULT_BASHRC}" /root/.bashrc && \
-    cp "${CONTAINER_DEFAULT_BASH_PROFILE}" /root/.bash_profile && \
-    cp "${CONTAINER_DEFAULT_INPUTRC}" /root/.inputrc && \
-    cp "${CONTAINER_DEFAULT_TMUX_CONF}" /root/.tmux.conf
+# Seed root's home with the one file bash needs to have any hook at all --
+# the rest is opt-in via ADOPT_DEFAULT_CONFIGS, same as the host-user path.
+RUN cp "${CONTAINER_DEFAULT_BASHRC}" /root/.bashrc
 
 RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \

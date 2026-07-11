@@ -102,10 +102,17 @@ fi
 #    . /etc/bash_completion
 #fi
 
-# Load the container toolchain environment. This file is seeded once into your
-# workspace home (or root's home) at container start and never overwritten
-# again, so this is the one place $ENV_SETUP_FILE is sourced from -- edit or
-# remove this block if you don't want it auto-loaded.
-if [ -n "${ENV_SETUP_FILE:-}" ] && [ -r "${ENV_SETUP_FILE}" ]; then
+# Load the container toolchain environment. Defaults to your own persistent
+# copy at $HOME/.env_setup.sh (create one with ADOPT_DEFAULT_CONFIGS); until
+# then, falls back live to the read-only shipped default so the banner and
+# helper functions are always available with zero setup. Edit or remove this
+# block if you don't want it auto-loaded; re-`source "$ENV_SETUP_FILE"` any
+# time after editing it to pick up changes in the current shell.
+export ENV_SETUP_FILE="${ENV_SETUP_FILE:-${HOME}/.env_setup.sh}"
+if [ ! -r "${ENV_SETUP_FILE}" ] && [ -n "${CONTAINER_DEFAULT_ENV_SETUP:-}" ] \
+        && [ -r "${CONTAINER_DEFAULT_ENV_SETUP}" ]; then
+    export ENV_SETUP_FILE="${CONTAINER_DEFAULT_ENV_SETUP}"
+fi
+if [ -r "${ENV_SETUP_FILE}" ]; then
     . "${ENV_SETUP_FILE}"
 fi
