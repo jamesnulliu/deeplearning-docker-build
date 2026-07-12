@@ -18,7 +18,7 @@ rest of your files), and container-side changes never touch your real
 
 The workspace is seeded **automatically**, like `/etc/skel` does for
 `useradd -m`: every default dotfile (`.bashrc`, `.bash_profile`, `.inputrc`,
-`.tmux.conf`, `.env_setup.sh`) lives in one directory, `/etc/jnl-dl/skel`, and
+`.tmux.conf`, `.vimrc`, `.env_setup.sh`) lives in one directory, `/etc/jnl-dl/skel`, and
 gets copied into `$HOME` on your very first shell — copy-if-missing, so
 nothing you edit is ever overwritten. `~/.ssh`/`~/.gitconfig` are symlinked in
 the same way from your real host home. Every shell tells you exactly what

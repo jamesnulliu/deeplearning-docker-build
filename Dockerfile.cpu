@@ -20,17 +20,17 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Config files
 COPY data/install-common.sh /usr/local/bin/install-common.sh
-COPY data/vimrc.local /etc/vim/vimrc.local
 
 # Default dotfiles + toolchain script -- copied into $HOME on first shell,
 # like /etc/skel for useradd -m (see /etc/jnl-dl/bootstrap.sh, hooked from
 # bash startup by install-common.sh so it works under any runtime).
 COPY data/bootstrap.sh /etc/jnl-dl/bootstrap.sh
-COPY data/bashrc /etc/jnl-dl/skel/.bashrc
-COPY data/bash_profile /etc/jnl-dl/skel/.bash_profile
-COPY data/inputrc /etc/jnl-dl/skel/.inputrc
-COPY data/tmux.conf /etc/jnl-dl/skel/.tmux.conf
-COPY data/env_setup.sh /etc/jnl-dl/skel/.env_setup.sh
+COPY data/.bashrc /etc/jnl-dl/skel/.bashrc
+COPY data/.bash_profile /etc/jnl-dl/skel/.bash_profile
+COPY data/.inputrc /etc/jnl-dl/skel/.inputrc
+COPY data/.tmux.conf /etc/jnl-dl/skel/.tmux.conf
+COPY data/.vimrc /etc/jnl-dl/skel/.vimrc
+COPY data/.env_setup.sh /etc/jnl-dl/skel/.env_setup.sh
 
 RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \

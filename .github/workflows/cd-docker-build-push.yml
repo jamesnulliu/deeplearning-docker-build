@@ -11,10 +11,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: [
-          "Dockerfile.cuda", 
-          "Dockerfile.cpu"
-        ]
+        # Newest patch release of each CUDA major line as of writing; bump these
+        # by hand when a newer 12.x/13.x release lands. cuda_version is unused
+        # for Dockerfile.cpu (image-configs.sh falls back to its own default).
+        include:
+          - dockerfile: "Dockerfile.cpu"
+            cuda_version: ""
+          - dockerfile: "Dockerfile.cuda"
+            cuda_version: "12.9.2"
+          - dockerfile: "Dockerfile.cuda"
+            cuda_version: "13.3.0"
 
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -41,6 +47,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
+        env:
+          CUDA_VERSION: ${{ matrix.cuda_version }}
         run: |
           IMAGE_NAME=$(bash ./scripts/build.sh "${{ matrix.dockerfile }}")
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV

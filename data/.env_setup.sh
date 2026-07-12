@@ -60,7 +60,7 @@ env_unload() {
 #        want to overwrite your own edits with the latest shipped defaults.
 ADOPT_DEFAULT_CONFIGS() {
     local f
-    for f in .bashrc .bash_profile .inputrc .tmux.conf .env_setup.sh; do
+    for f in .bashrc .bash_profile .inputrc .tmux.conf .vimrc .env_setup.sh; do
         [ -r "${JNL_DL_SKEL}/${f}" ] || continue
         if [ -e "${HOME}/${f}" ]; then
             cp -f "${HOME}/${f}" "${HOME}/${f}.bak"
@@ -96,6 +96,23 @@ INSTALL_AI_CLI() {
     fi
     npm install -g @openai/codex @anthropic-ai/claude-code
 }
+
+# ---------------------------------------------------------------------------
+# Terminal colors -- Docker never forwards the host's TERM/COLORTERM into the
+# container, so an interactive shell often inherits a bare 8-color "xterm"
+# even though the real terminal supports far more. That silently breaks
+# color-dependent highlights (e.g. vim's CursorColumn falls back to plain
+# black instead of grey) with no error to explain why. Upgrade only if the
+# inherited TERM doesn't already advertise rich color support.
+# ---------------------------------------------------------------------------
+case "${TERM:-}" in
+    *256color*|*-direct) ;;
+    *) export TERM="xterm-256color" ;;
+esac
+export COLORTERM="${COLORTERM:-truecolor}"
+echo "[ENV-SETUP] TERM: ${TERM}"
+echo "            |- COLORTERM: ${COLORTERM}"
+echo "            |- if your terminal actually has fewer colors, export TERM/COLORTERM yourself before this runs"
 
 # Time zone:
 #   To set a default time zone for interactive shells, edit this file manually
