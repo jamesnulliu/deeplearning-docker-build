@@ -31,6 +31,8 @@ COPY data/.inputrc /etc/jnl-dl/skel/.inputrc
 COPY data/.tmux.conf /etc/jnl-dl/skel/.tmux.conf
 COPY data/.vimrc /etc/jnl-dl/skel/.vimrc
 COPY data/.env_setup.sh /etc/jnl-dl/skel/.env_setup.sh
+COPY data/.env_setup_functions.sh /etc/jnl-dl/skel/.env_setup_functions.sh
+COPY data/.env_setup_banner.sh /etc/jnl-dl/skel/.env_setup_banner.sh
 
 RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \

@@ -43,8 +43,6 @@ apt-get install -y --no-install-recommends \
     ninja-build \
     curl \
     jq \
-    nodejs \
-    npm \
     pkg-config \
     openssh-client \
     sudo \
@@ -97,6 +95,17 @@ ln -sf "/usr/bin/clang-tidy-${LLVM_VERSION}" /usr/bin/clang-tidy
 ln -sf "/usr/bin/clang-format-${LLVM_VERSION}" /usr/bin/clang-format
 ln -sf "/usr/bin/lldb-${LLVM_VERSION}" /usr/bin/lldb
 
+# Node.js -- Ubuntu's own nodejs/npm packages are frozen at an old major
+# version (18.x on 24.04), which is too old for current CLI tools (e.g.
+# @anthropic-ai/claude-code requires node >=22) and ships an old npm to
+# match. Use NodeSource's setup script for a current LTS release instead,
+# which brings its own matching current npm -- no separate npm install/
+# upgrade needed.
+NODE_MAJOR=22
+wget -O /tmp/nodesource_setup.sh "https://deb.nodesource.com/setup_${NODE_MAJOR}.x"
+bash /tmp/nodesource_setup.sh
+apt-get install -y --no-install-recommends nodejs
+
 # Install Rust into a shared, root-owned location. cargo/rustc/rustup are exposed
 # on the default PATH via /usr/local/bin symlinks, so every user can build without
 # any env var. CARGO_HOME is deliberately NOT persisted as an image env var: at
@@ -133,7 +142,7 @@ visudo -cf /etc/sudoers.d/nopasswd-all
 apt-get autoremove -y
 apt-get clean
 rm -rf /var/lib/apt/lists/*
-rm -f /tmp/kitware-archive.sh /tmp/llvm.sh
+rm -f /tmp/kitware-archive.sh /tmp/llvm.sh /tmp/nodesource_setup.sh
 
 git config --system --unset-all user.name || true
 git config --system --unset-all user.email || true

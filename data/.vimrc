@@ -2,6 +2,17 @@ au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g
 
 set background=dark
 
+" Vim's unnamed default colorscheme renders comments (e.g. in shell files) as
+" a low-contrast purple on a dark background. habamax ships with vim itself
+" (since 9.0, see /usr/share/vim/*/colors/habamax.vim) and gives legible grey
+" comments with better overall contrast; `silent!` keeps older vim without it
+" from erroring out.
+syntax on
+silent! colorscheme habamax
+if $COLORTERM ==# 'truecolor' || $COLORTERM ==# '24bit'
+    set termguicolors
+endif
+
 set ff=unix             " Use Unix (LF) line endings
 set showcmd             " Show (partial) command in status line.
 set showmatch           " Show matching brackets.
