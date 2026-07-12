@@ -109,13 +109,18 @@ ln -sf /usr/local/cargo/bin/* /usr/local/bin/
 curl -LsSf https://astral.sh/uv/install.sh | \
     env UV_INSTALL_DIR="${UV_HOME}" UV_NO_MODIFY_PATH=1 sh
 
-# The container toolchain environment ($ENV_SETUP_FILE) is sourced from
-# data/bashrc, which is the only file entrypoint.sh seeds automatically (the
-# minimum needed for bash to have any hook at all in a fresh workspace home).
-# Everything else -- the user's own persistent env_setup.sh copy, the other
-# dotfiles, ~/.ssh/~/.gitconfig linking -- is opt-in via ADOPT_DEFAULT_CONFIGS
-# and LINK_HOST_IDENTITY, both defined in data/env_setup.sh and surfaced in
-# the seeded ~/.bashrc's startup banner.
+# Minimal, transparent, non-destructive hook -- works under any runtime
+# that runs a plain bash shell (Docker exec, Apptainer shell/exec, a bare
+# `docker run --entrypoint bash`, ...), not just this image's ENTRYPOINT.
+# `cat /etc/jnl-dl/bootstrap.sh` shows exactly what it does; it never
+# overwrites anything in $HOME.
+JNL_DL_HOOK='[ -r /etc/jnl-dl/bootstrap.sh ] && . /etc/jnl-dl/bootstrap.sh'
+printf '\n# jnl-dl workspace bootstrap (see /etc/jnl-dl/bootstrap.sh)\n%s\n' \
+    "${JNL_DL_HOOK}" >> /etc/bash.bashrc
+install -d -m 0755 /etc/profile.d
+printf '# jnl-dl workspace bootstrap for login shells (see /etc/jnl-dl/bootstrap.sh)\n%s\n' \
+    "${JNL_DL_HOOK}" > /etc/profile.d/00-jnl-dl.sh
+chmod 0644 /etc/profile.d/00-jnl-dl.sh
 
 # Passwordless sudo for whichever host user/uid the container resolves to via
 # the bind-mounted /etc/passwd -- the image is built once but run as different

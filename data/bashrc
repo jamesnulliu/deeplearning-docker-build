@@ -54,9 +54,9 @@ parse_git_branch() {
 }
 
 if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;35m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[33m\]$(parse_git_branch)\[\033[00m\]\n\$ '
+    PS1='[JNL/DL] ${debian_chroot:+($debian_chroot)}\[\033[01;35m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[33m\]$(parse_git_branch)\[\033[00m\]\n\$ '
 else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\n\$ '
+    PS1='[JNL/DL] ${debian_chroot:+($debian_chroot)}\u@\h:\w\n\$ '
 fi
 unset color_prompt force_color_prompt
 
@@ -102,17 +102,6 @@ fi
 #    . /etc/bash_completion
 #fi
 
-# Load the container toolchain environment. Defaults to your own persistent
-# copy at $HOME/.env_setup.sh (create one with ADOPT_DEFAULT_CONFIGS); until
-# then, falls back live to the read-only shipped default so the banner and
-# helper functions are always available with zero setup. Edit or remove this
-# block if you don't want it auto-loaded; re-`source "$ENV_SETUP_FILE"` any
-# time after editing it to pick up changes in the current shell.
-export ENV_SETUP_FILE="${ENV_SETUP_FILE:-${HOME}/.env_setup.sh}"
-if [ ! -r "${ENV_SETUP_FILE}" ] && [ -n "${CONTAINER_DEFAULT_ENV_SETUP:-}" ] \
-        && [ -r "${CONTAINER_DEFAULT_ENV_SETUP}" ]; then
-    export ENV_SETUP_FILE="${CONTAINER_DEFAULT_ENV_SETUP}"
-fi
-if [ -r "${ENV_SETUP_FILE}" ]; then
-    . "${ENV_SETUP_FILE}"
-fi
+# The container toolchain environment ($ENV_SETUP_FILE, banner, helper
+# functions) is loaded before this file runs -- see /etc/jnl-dl/bootstrap.sh,
+# hooked from /etc/bash.bashrc.

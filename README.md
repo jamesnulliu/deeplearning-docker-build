@@ -11,17 +11,31 @@ files you create keep your host ownership. Passwordless `sudo` is available if
 you need root for a one-off command.
 
 `$HOME` inside the container is an **isolated workspace directory**, not your
-real host home — default `~/.dl-workspace`, override with `--workspace-home`.
+real host home — default `~/.jnl-dl-container-home`, override with `--workspace-home`.
 It's a plain host directory (so it survives `docker rm`/recreate just like the
 rest of your files), and container-side changes never touch your real
-`~/.bashrc` etc. Only `~/.bashrc` is seeded into it automatically (the minimum
-bash needs to have any hook at all in an otherwise-empty directory) —
-everything else is opt-in, one function call away, and prompted by that
-seeded `~/.bashrc`'s startup banner: `ADOPT_DEFAULT_CONFIGS` installs the rest
-of the container's default dotfiles (including your own persistent copy of
-the toolchain script, `~/.env_setup.sh`), and `LINK_HOST_IDENTITY` symlinks in
-`~/.ssh`/`~/.gitconfig` from your real host home so git/ssh work. Your host
-`/home` is still mounted at `/home` for general file access.
+`~/.bashrc` etc.
+
+The workspace is seeded **automatically**, like `/etc/skel` does for
+`useradd -m`: every default dotfile (`.bashrc`, `.bash_profile`, `.inputrc`,
+`.tmux.conf`, `.env_setup.sh`) lives in one directory, `/etc/jnl-dl/skel`, and
+gets copied into `$HOME` on your very first shell — copy-if-missing, so
+nothing you edit is ever overwritten. `~/.ssh`/`~/.gitconfig` are symlinked in
+the same way from your real host home. Every shell tells you exactly what
+state your workspace is in:
+```
+[jnl-dl] Workspace /home/you/.jnl-dl-container-home: new -- seeding default configs from /etc/jnl-dl/skel.
+```
+or, once it exists:
+```
+[jnl-dl] Workspace /home/you/.jnl-dl-container-home: already set up (left untouched; any files you don't have yet are still added below).
+```
+This is driven entirely by `/etc/bash.bashrc`/`/etc/profile.d` (bash's own
+startup files, see `/etc/jnl-dl/bootstrap.sh`), not Docker's `ENTRYPOINT` —
+so it works the same way under any runtime that runs a plain bash shell
+(Docker exec, Apptainer `shell`/`exec`, a bare `docker run --entrypoint
+bash`, ...). Your host `/home` is still mounted at `/home` for general file
+access.
 
 ```bash
 # Run as yourself (default):
@@ -33,14 +47,12 @@ bash ./scripts/run.sh -i <image> --root -c devbox
 bash ./scripts/exec.sh devbox --root
 ```
 
-The container toolchain environment (`$ENV_SETUP_FILE`) defaults to your own
-persistent `~/.env_setup.sh` once you've run `ADOPT_DEFAULT_CONFIGS`; until
-then it falls back live to the read-only shipped default, so the banner and
-helper functions are always available with zero setup. It's sourced from your
-workspace's `~/.bashrc` — not a root-owned system file — so editing it and
-opening a new shell (or re-running `source "$ENV_SETUP_FILE"`) always picks up
-your changes. It prints every environment variable it touches so you always
-know what is set.
+The container toolchain environment (`$ENV_SETUP_FILE`) always points at your
+own persistent `~/.env_setup.sh` — guaranteed to exist from your first shell
+onward, so there's no fallback path and no staleness to worry about. Editing
+it and opening a new shell (or re-running `source "$ENV_SETUP_FILE"` in the
+same shell) always picks up your changes. It prints every environment
+variable it touches so you always know what is set.
 
 State/cache/root directories are **intentionally not defaulted** — you set them
 yourself so nothing points at a stale, guessed location across container
@@ -56,13 +68,10 @@ the matching helper:
   unless you set `CARGO_HOME` to relocate its state and add its bin dir to `PATH`.
 - `UV_CACHE_DIR` / `UV_PYTHON_INSTALL_DIR` (optional) — override uv's own defaults.
 
-`ADOPT_DEFAULT_CONFIGS` installs (or re-syncs) the container default dotfiles
-(exposed as `CONTAINER_DEFAULT_BASHRC`, `CONTAINER_DEFAULT_INPUTRC`,
-`CONTAINER_DEFAULT_TMUX_CONF`, `CONTAINER_DEFAULT_BASH_PROFILE`,
-`CONTAINER_DEFAULT_ENV_SETUP`) into your workspace home, backing up any
-existing files to `*.bak`. Only `~/.bashrc` is seeded automatically at
-container start; run this for everything else, or whenever you deliberately
-want to pull in updated shipped defaults later. `LINK_HOST_IDENTITY` is the
-equivalent for `~/.ssh`/`~/.gitconfig` — symlinks in whatever's missing from
-your real host home.
+`ADOPT_DEFAULT_CONFIGS` force re-syncs the shipped default dotfiles from
+`/etc/jnl-dl/skel` into your workspace home, backing up any existing files to
+`*.bak` first. Your workspace is already seeded automatically on your first
+shell (see above) — use this only when you deliberately want to overwrite
+your own edits with the latest shipped defaults, e.g. after pulling a newer
+image.
 

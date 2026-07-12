@@ -21,7 +21,7 @@ Run a container from an existing image.
 By default the container runs as the invoking host user (same UID/GID and full
 group list), with /etc/passwd and /etc/group mounted read-only so names and
 groups resolve. HOME points at an isolated per-user workspace directory
-(default ~/.dl-workspace) instead of your real host home, so container-side
+(default ~/.jnl-dl-container-home) instead of your real host home, so container-side
 dotfile changes never touch your real ~/.bashrc etc. It is seeded on first use
 and never re-seeded or clobbered afterward. ~/.ssh and ~/.gitconfig are
 symlinked in automatically. Your host /home is still mounted at /home for
@@ -33,7 +33,7 @@ Options:
   --tmp                          Run interactively and remove the container on exit.
   --root                         Run as root instead of the host user.
   --workspace-home <path>        Override the host-user workspace directory. Defaults to
-                                  ~/.dl-workspace.
+                                  ~/.jnl-dl-container-home.
   --proxy <url>                  Set http_proxy, https_proxy, and all_proxy.
   --sys-admin                    Add SYS_ADMIN capability and disable seccomp and apparmor.
   --gpus <value>                 Override GPU request, for example: all.
@@ -159,11 +159,13 @@ if [[ "${ROOT_MODE}" == "true" ]]; then
     WORKSPACE_ARGS=()
 else
     # Isolate HOME from the real host home: point it at a per-user workspace
-    # directory instead, seeded once (idempotently) by entrypoint.sh. Recreating
-    # the container against the same workspace dir never re-seeds or clobbers
-    # accumulated state (vcpkg, npm-global CLIs, history, hand-edited dotfiles),
-    # since it is a plain host directory that outlives `docker rm`.
-    WORKSPACE_HOME="${WORKSPACE_HOME:-${HOME}/.dl-workspace}"
+    # directory instead, seeded automatically via /etc/jnl-dl/bootstrap.sh
+    # (hooked from bash startup, not entrypoint.sh -- works under any runtime
+    # that runs a plain bash shell). Recreating the container against the
+    # same workspace dir never re-seeds or clobbers accumulated state (vcpkg,
+    # npm-global CLIs, history, hand-edited dotfiles), since it is a plain
+    # host directory that outlives `docker rm`.
+    WORKSPACE_HOME="${WORKSPACE_HOME:-${HOME}/.jnl-dl-container-home}"
     # Docker creates a missing bind-mount source as root, which the mapped
     # non-root uid then can't write into -- create it ourselves first.
     mkdir -p "${WORKSPACE_HOME}"

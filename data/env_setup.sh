@@ -1,5 +1,7 @@
 # @ https://patorjk.com/software/taag/?p=display&f=Varsity&t=JNL%2FDL&x=none
 
+JNL_DL_SKEL="/etc/jnl-dl/skel"
+
 sed "s|\${IMAGE_NAME}|${IMAGE_NAME}|g" << 'EOF'
 ===============================================================================
         _____   ____  _____    _____          __  ______      _____
@@ -51,52 +53,22 @@ env_unload() {
     export $var_name=$(IFS=:; echo "${new_paths[*]}")
 }
 
-# @brief Install (or re-sync) the container default dotfiles into $HOME,
-#        including your own persistent, editable copy of this very file at
-#        $HOME/.env_setup.sh (see ENV_SETUP_FILE resolution in ~/.bashrc --
-#        once it exists, every new shell sources it instead of the read-only
-#        shipped default). Only ~/.bashrc is seeded automatically at
-#        container start; run this for everything else, or to deliberately
-#        pull in updated shipped defaults later. Existing files are backed up
-#        to "<file>.bak" first, so your own edits are never lost.
+# @brief Force re-sync the shipped default dotfiles from /etc/jnl-dl/skel
+#        into $HOME, backing up existing files to "<file>.bak" first. Your
+#        workspace is already seeded automatically on first shell (see
+#        /etc/jnl-dl/bootstrap.sh) -- use this only when you deliberately
+#        want to overwrite your own edits with the latest shipped defaults.
 ADOPT_DEFAULT_CONFIGS() {
-    local pair src dst
-    for pair in \
-        "${CONTAINER_DEFAULT_BASHRC}=${HOME}/.bashrc" \
-        "${CONTAINER_DEFAULT_BASH_PROFILE}=${HOME}/.bash_profile" \
-        "${CONTAINER_DEFAULT_INPUTRC}=${HOME}/.inputrc" \
-        "${CONTAINER_DEFAULT_TMUX_CONF}=${HOME}/.tmux.conf" \
-        "${CONTAINER_DEFAULT_ENV_SETUP}=${HOME}/.env_setup.sh"; do
-        src="${pair%%=*}"
-        dst="${pair##*=}"
-        [ -r "$src" ] || continue
-        if [ -e "$dst" ]; then
-            cp -f "$dst" "$dst.bak"
-            echo "[ENV-SETUP] Backed up $dst -> $dst.bak"
+    local f
+    for f in .bashrc .bash_profile .inputrc .tmux.conf .env_setup.sh; do
+        [ -r "${JNL_DL_SKEL}/${f}" ] || continue
+        if [ -e "${HOME}/${f}" ]; then
+            cp -f "${HOME}/${f}" "${HOME}/${f}.bak"
+            echo "[ENV-SETUP] Backed up ${HOME}/${f} -> ${HOME}/${f}.bak"
         fi
-        cp -f "$src" "$dst"
-        echo "[ENV-SETUP] Installed $src -> $dst"
+        cp -f "${JNL_DL_SKEL}/${f}" "${HOME}/${f}"
+        echo "[ENV-SETUP] Installed ${JNL_DL_SKEL}/${f} -> ${HOME}/${f}"
     done
-}
-
-# @brief Symlink ~/.ssh and ~/.gitconfig from your real host home into this
-#        workspace, so git/ssh work without copying credentials in. Only
-#        links what's missing -- safe to call more than once.
-LINK_HOST_IDENTITY() {
-    local real_home
-    real_home="$(getent passwd "$(id -u)" 2>/dev/null | cut -d: -f6)" || true
-    if [ -z "${real_home:-}" ] || [ "${real_home}" = "${HOME}" ]; then
-        echo "[ENV-SETUP] No separate host home found to link from."
-        return 0
-    fi
-    if [ -d "${real_home}/.ssh" ] && [ ! -e "${HOME}/.ssh" ]; then
-        ln -s "${real_home}/.ssh" "${HOME}/.ssh"
-        echo "[ENV-SETUP] Linked ${HOME}/.ssh -> ${real_home}/.ssh"
-    fi
-    if [ -f "${real_home}/.gitconfig" ] && [ ! -e "${HOME}/.gitconfig" ]; then
-        ln -s "${real_home}/.gitconfig" "${HOME}/.gitconfig"
-        echo "[ENV-SETUP] Linked ${HOME}/.gitconfig -> ${real_home}/.gitconfig"
-    fi
 }
 
 # @brief Clone and bootstrap vcpkg into $VCPKG_ROOT (which you must set first).
@@ -222,15 +194,11 @@ fi
 # ---------------------------------------------------------------------------
 # Container default dotfiles (copy into your home to adopt them).
 # ---------------------------------------------------------------------------
-echo "[ENV-SETUP] Container default configs (only ~/.bashrc is auto-seeded;"
-echo "            run 'ADOPT_DEFAULT_CONFIGS' to install the rest into \$HOME):"
-echo "            |- CONTAINER_DEFAULT_BASHRC:       ${CONTAINER_DEFAULT_BASHRC:-<not set>}"
-echo "            |- CONTAINER_DEFAULT_BASH_PROFILE: ${CONTAINER_DEFAULT_BASH_PROFILE:-<not set>}"
-echo "            |- CONTAINER_DEFAULT_INPUTRC:      ${CONTAINER_DEFAULT_INPUTRC:-<not set>}"
-echo "            |- CONTAINER_DEFAULT_TMUX_CONF:    ${CONTAINER_DEFAULT_TMUX_CONF:-<not set>}"
-echo "            |- CONTAINER_DEFAULT_ENV_SETUP:    ${CONTAINER_DEFAULT_ENV_SETUP:-<not set>}"
+echo "[ENV-SETUP] Default configs live in ${JNL_DL_SKEL}, seeded into \$HOME"
+echo "            automatically on first shell (see /etc/jnl-dl/bootstrap.sh);"
+echo "            run 'ADOPT_DEFAULT_CONFIGS' to force re-sync updated defaults."
 if [ -e "${HOME}/.ssh" ] || [ -e "${HOME}/.gitconfig" ]; then
     echo "[ENV-SETUP] Host identity: linked (~/.ssh or ~/.gitconfig present in \$HOME)"
 else
-    echo "[ENV-SETUP] Host identity: not linked; run 'LINK_HOST_IDENTITY' to symlink your real ~/.ssh and ~/.gitconfig"
+    echo "[ENV-SETUP] Host identity: no separate host home detected to link from"
 fi
