@@ -67,5 +67,21 @@ INSTALL_AI_CLI() {
         echo "                   (uncomment the suggested default in ${ENV_SETUP_FILE}), then retry."
         return 1
     fi
-    npm install -g @openai/codex @anthropic-ai/claude-code
+    npm install -g @openai/codex @anthropic-ai/claude-code || return 1
+
+    # @anthropic-ai/claude-code ships a tiny stub at bin/claude.exe and relies on
+    # its postinstall to hardlink the ~300MB platform-native binary over that stub.
+    # npm's optional-dependency ordering (and later auto-update reinstalls) can
+    # skip that step, leaving `claude` as the "native binary not installed" stub --
+    # baked into the persisted npm-global home so it survives container restarts.
+    # Re-run the postinstall explicitly to place the binary, then verify it launches.
+    local cc_pkg="${NPM_CONFIG_PREFIX}/lib/node_modules/@anthropic-ai/claude-code"
+    if [ -f "${cc_pkg}/install.cjs" ]; then
+        ( cd "${cc_pkg}" && node install.cjs ) || true
+    fi
+
+    if command -v claude > /dev/null 2>&1 && ! claude --version > /dev/null 2>&1; then
+        echo "[ENV-SETUP] WARNING: 'claude' is on PATH but its native binary failed to launch."
+        echo "                     Try: ( cd '${cc_pkg}' && node install.cjs )"
+    fi
 }
