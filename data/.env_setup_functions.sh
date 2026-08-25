@@ -30,15 +30,20 @@ env_unload() {
 #        workspace is already seeded automatically on first shell (see
 #        /etc/jnl-dl/bootstrap.sh) -- use this only when you deliberately
 #        want to overwrite your own edits with the latest shipped defaults.
+# .claude/settings.json is deliberately absent from this list: it carries your
+# own model, effort, theme and permission choices, and is only ever seeded into
+# a brand-new workspace by the non-clobbering copy in bootstrap.sh.
 ADOPT_DEFAULT_CONFIGS() {
     local f
-    for f in .bashrc .bash_profile .inputrc .tmux.conf .vimrc \
-             .env_setup.sh .env_setup_functions.sh .env_setup_banner.sh; do
+    for f in .bashrc .bash_profile .inputrc .tmux.conf .vimrc .npmrc \
+             .env_setup.sh .env_setup_functions.sh .env_setup_banner.sh \
+             .claude/statusline-command.sh; do
         [ -r "${JNL_DL_SKEL}/${f}" ] || continue
         if [ -e "${HOME}/${f}" ]; then
             cp -f "${HOME}/${f}" "${HOME}/${f}.bak"
             echo "[ENV-SETUP] Backed up ${HOME}/${f} -> ${HOME}/${f}.bak"
         fi
+        mkdir -p "$(dirname "${HOME}/${f}")"
         cp -f "${JNL_DL_SKEL}/${f}" "${HOME}/${f}"
         echo "[ENV-SETUP] Installed ${JNL_DL_SKEL}/${f} -> ${HOME}/${f}"
     done
@@ -60,6 +65,67 @@ INSTALL_VCPKG() {
     echo "[ENV-SETUP] vcpkg installed. Open a new shell (or re-source ${ENV_SETUP_FILE}) to load it onto PATH."
 }
 
+# @brief Absolute path to the `claude` executable npm's bin symlink points at.
+#        Fails if NPM_CONFIG_PREFIX is unset or the package is not installed.
+_claude_exe_path() {
+    [ -n "${NPM_CONFIG_PREFIX:-}" ] || return 1
+    local exe="${NPM_CONFIG_PREFIX}/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe"
+    [ -f "${exe}" ] || return 1
+    printf '%s\n' "${exe}"
+}
+
+# @brief True when `claude` is still npm's placeholder rather than the real
+#        binary. The placeholder is ~500 bytes and the native binary ~250MB, so
+#        a size test settles it without executing anything; 4096 is the same
+#        threshold claude-code's own install.cjs uses to recognise its stub.
+AI_CLI_NEEDS_REPAIR() {
+    local exe size
+    exe="$(_claude_exe_path)" || return 1
+    size="$(stat -c %s "${exe}" 2>/dev/null)" || return 1
+    [ "${size}" -lt 4096 ]
+}
+
+# @brief Put the real claude binary back over npm's placeholder.
+#
+# npm 12 runs a dependency's postinstall only if the package is listed in
+# `allowScripts`. @anthropic-ai/claude-code needs its postinstall
+# (`node install.cjs`) to hardlink the platform-native binary over the stub at
+# bin/claude.exe; when it is blocked, `claude` only ever prints
+# "Error: claude native binary not installed." -- while npm exits 0.
+#
+# The shipped ~/.npmrc grants that permission, which is what keeps future
+# installs correct, including the ones Claude Code's auto-updater fires off on
+# its own schedule. This function is the repair path for an install that has
+# already gone wrong: a workspace created before that .npmrc existed, or one
+# where the file was removed. No-op on a healthy install.
+REPAIR_AI_CLI() {
+    local exe pkg
+    if ! exe="$(_claude_exe_path)"; then
+        echo "[ENV-SETUP] claude-code not installed under \$NPM_CONFIG_PREFIX; run 'INSTALL_AI_CLI'."
+        return 1
+    fi
+    pkg="$(dirname "$(dirname "${exe}")")"
+
+    if [ ! -f "${pkg}/install.cjs" ]; then
+        echo "[ENV-SETUP] ERROR: ${pkg}/install.cjs is missing; reinstall with 'INSTALL_AI_CLI'."
+        return 1
+    fi
+
+    ( cd "${pkg}" && node install.cjs ) || {
+        echo "[ENV-SETUP] ERROR: claude postinstall failed."
+        return 1
+    }
+
+    if AI_CLI_NEEDS_REPAIR; then
+        echo "[ENV-SETUP] ERROR: 'claude' is still the placeholder stub after running install.cjs."
+        echo "                   The platform-native package was probably never downloaded."
+        echo "                   Reinstall with: INSTALL_AI_CLI"
+        return 1
+    fi
+
+    echo "[ENV-SETUP] claude native binary restored ($("${exe}" --version 2>/dev/null || echo 'version unknown'))."
+}
+
 # @brief Install the Codex and Claude CLIs into $NPM_CONFIG_PREFIX (set it first).
 INSTALL_AI_CLI() {
     if [ -z "${NPM_CONFIG_PREFIX:-}" ]; then
@@ -67,21 +133,16 @@ INSTALL_AI_CLI() {
         echo "                   (uncomment the suggested default in ${ENV_SETUP_FILE}), then retry."
         return 1
     fi
-    npm install -g @openai/codex @anthropic-ai/claude-code || return 1
 
-    # @anthropic-ai/claude-code ships a tiny stub at bin/claude.exe and relies on
-    # its postinstall to hardlink the ~300MB platform-native binary over that stub.
-    # npm's optional-dependency ordering (and later auto-update reinstalls) can
-    # skip that step, leaving `claude` as the "native binary not installed" stub --
-    # baked into the persisted npm-global home so it survives container restarts.
-    # Re-run the postinstall explicitly to place the binary, then verify it launches.
-    local cc_pkg="${NPM_CONFIG_PREFIX}/lib/node_modules/@anthropic-ai/claude-code"
-    if [ -f "${cc_pkg}/install.cjs" ]; then
-        ( cd "${cc_pkg}" && node install.cjs ) || true
-    fi
+    # --allow-scripts repeats what ~/.npmrc already grants, so the install is
+    # correct even in a workspace whose .npmrc predates it or was edited away.
+    npm install -g --allow-scripts=@anthropic-ai/claude-code \
+        @openai/codex @anthropic-ai/claude-code || return 1
 
-    if command -v claude > /dev/null 2>&1 && ! claude --version > /dev/null 2>&1; then
-        echo "[ENV-SETUP] WARNING: 'claude' is on PATH but its native binary failed to launch."
-        echo "                     Try: ( cd '${cc_pkg}' && node install.cjs )"
+    # npm reports success whether or not the postinstall actually ran, so verify
+    # rather than trust, and repair if the placeholder is still sitting there.
+    if AI_CLI_NEEDS_REPAIR; then
+        echo "[ENV-SETUP] npm left the claude placeholder in place; running its postinstall."
+        REPAIR_AI_CLI || return 1
     fi
 }

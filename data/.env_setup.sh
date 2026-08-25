@@ -88,7 +88,17 @@ if [ -n "${NPM_CONFIG_PREFIX:-}" ]; then
     echo "            |- \$NPM_CONFIG_PREFIX/bin added to PATH"
 fi
 if command -v codex > /dev/null 2>&1 && command -v claude > /dev/null 2>&1; then
-    echo "            |- codex and claude found on PATH"
+    # Being on PATH is not the same as working. When npm blocks claude-code's
+    # postinstall (see ~/.npmrc) the `claude` on PATH is a placeholder that only
+    # prints an error. Check here rather than leaving it for first use: Claude
+    # Code's auto-updater reinstalls on its own schedule, so a workspace that
+    # worked yesterday can come back broken with nothing having changed locally.
+    if AI_CLI_NEEDS_REPAIR; then
+        echo "            |- claude is the placeholder stub (npm blocked its postinstall); repairing"
+        REPAIR_AI_CLI
+    else
+        echo "            |- codex and claude found on PATH"
+    fi
 else
     echo "            |- codex/claude not found; run 'INSTALL_AI_CLI'"
 fi

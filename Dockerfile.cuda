@@ -31,9 +31,16 @@ COPY data/.bash_profile /etc/jnl-dl/skel/.bash_profile
 COPY data/.inputrc /etc/jnl-dl/skel/.inputrc
 COPY data/.tmux.conf /etc/jnl-dl/skel/.tmux.conf
 COPY data/.vimrc /etc/jnl-dl/skel/.vimrc
+COPY data/.npmrc /etc/jnl-dl/skel/.npmrc
 COPY data/.env_setup.sh /etc/jnl-dl/skel/.env_setup.sh
 COPY data/.env_setup_functions.sh /etc/jnl-dl/skel/.env_setup_functions.sh
 COPY data/.env_setup_banner.sh /etc/jnl-dl/skel/.env_setup_banner.sh
+
+# Claude Code status line. Only settings.json's statusLine key is shipped -- the
+# file is seeded by bootstrap.sh's copy-if-missing, so a workspace that already
+# has its own settings.json (model, effort, theme, permissions) keeps it.
+COPY data/.claude/statusline-command.sh /etc/jnl-dl/skel/.claude/statusline-command.sh
+COPY data/.claude/settings.json /etc/jnl-dl/skel/.claude/settings.json
 
 RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \
