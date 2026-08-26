@@ -1,13 +1,18 @@
 #!/bin/bash
 # Status line for Claude Code inside the JNL/DL container. One row:
 #
-#   [JNL/DL] user@host:cwd [branch] ......... Model effort flags | bar NN% used/size
-#   \___ mirrors the PS1 in ~/.bashrc ___/    \___ right-aligned session state ___/
+#   Model effort flags bar NN% used/size | [JNL/DL] user@host:cwd [branch]   /rc
+#   \_______ session state _______/        \___ mirrors the PS1 in ~/.bashrc ___/
 #
 # It is one row on purpose. Claude Code draws its own footer badges (e.g.
 # "bypass permissions on") in the row *below* the status line, and a script
 # cannot write into that row -- so keeping this to a single line is what makes
 # the terminal show two status rows in total rather than three.
+#
+# The tail of the row is left empty for the Remote Control badge ("/rc active",
+# "/rc reconnecting", ...), which Claude Code right-aligns onto the first status
+# row whenever that row leaves it space. Run the row out to the full width and
+# the badge claims a whole row of its own instead.
 #
 # stdin carries the session JSON documented at
 # https://code.claude.com/docs/en/statusline -- every field read below is
@@ -37,7 +42,7 @@ C_MODEL="${E}[01;36m"   # model name
 C_EFFORT="${E}[00;35m"  # reasoning effort
 C_FAST="${E}[00;33m"    # fast mode
 C_THINK="${E}[00;34m"   # extended thinking
-C_DIM="${E}[02m"        # token counts
+C_SEP="${E}[00;97m"     # group separator
 
 # Visible width: ANSI sequences removed, then counted in characters.
 vis() {
@@ -84,12 +89,12 @@ if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
 fi
 [ -n "$debian_chroot" ] && chroot_part="($debian_chroot)"
 
-# ------------------------------------------------------------------ left group
+# ------------------------------------------------------- identity group (right)
 # $1 = path to display. $2 = detail: 2 full, 1 drops the constant [JNL/DL] tag,
 # 0 drops the git branch as well. The tag goes first because it never varies,
 # whereas the branch actually tells you something. Only narrow terminals get
 # below 2.
-build_left() {
+build_ident() {
     local out=""
     [ "$2" -ge 2 ] && out+="[JNL/DL] ${chroot_part}"
     out+="${C_ID}${user}@${host}${OFF}:${C_DIR}${1}${OFF}"
@@ -97,7 +102,7 @@ build_left() {
     printf '%s' "$out"
 }
 
-# ----------------------------------------------------------------- right group
+# ---------------------------------------------------------- state group (left)
 human() {                                # 15500 -> 16k, 1000000 -> 1.0M
     local n=${1:-0}
     if   [ "$n" -ge 1000000 ]; then awk -v n="$n" 'BEGIN{printf "%.1fM", n/1000000}'
@@ -124,7 +129,7 @@ fi
 
 # $1 = detail level: 3 full, 2 drops the token counts, 1 drops the bar as well,
 # 0 drops the effort/fast/thinking flags, leaving just the model and percentage.
-build_right() {
+build_state() {
     local out="${C_MODEL}${model}${OFF}"
     if [ "$1" -ge 1 ]; then
         [ -n "$effort" ]   && out+=" ${C_EFFORT}${effort}${OFF}"
@@ -139,7 +144,7 @@ build_right() {
     # Absolute counts only once the first API response has set a window size --
     # "0/0" on a fresh session is noise, not information.
     if [ "$1" -ge 3 ] && [ "${size:-0}" -gt 0 ]; then
-        out+=" ${C_DIM}$(human "$used")/$(human "$size")${OFF}"
+        out+=" $(human "$used")/$(human "$size")"
     fi
     printf '%s' "$out"
 }
@@ -154,44 +159,41 @@ reserve=4
 cols=$(( ${COLUMNS:-80} - reserve ))
 [ "$cols" -lt 20 ] && cols=${COLUMNS:-80}
 
-# Claude Code right-aligns its Remote Control badge ("/rc active",
-# "/rc reconnecting", ...) onto the FIRST row of the status line, if that row
-# leaves space for it. A first row run out to the full width leaves the badge
-# nowhere to sit and it claims a whole row of its own, so keep row 1 short and
-# give the session state row 2 to itself. 16 is the widest label
-# ("/rc reconnecting"), plus a two-column gap.
+# Columns held back at the right edge for the /rc badge (see the header note).
+# 16 is the widest label ("/rc reconnecting"), plus a two-column gap.
 badge=18
+avail=$(( cols - badge ))
+[ "$avail" -lt 40 ] && avail=$cols
 
-# --- row 1: identity, left-aligned, capped so the /rc badge still fits ------
-row1_max=$(( cols - badge ))
-[ "$row1_max" -lt 20 ] && row1_max=$cols
-row1=""
-for l in 2 1 0; do
-    fixed=$(vis "$(build_left "" "$l")")     # left group with the path removed
-    avail=$(( row1_max - fixed ))            # columns left for the path itself
-    if [ "$avail" -ge "${#display_dir}" ]; then
-        row1=$(build_left "$display_dir" "$l"); break
-    elif [ "$avail" -ge 2 ]; then
-        row1=$(build_left "…${display_dir: -$((avail - 1))}" "$l"); break
-    fi
-done
-[ -z "$row1" ] && row1=$(build_left "" 0)
-printf '%s\n' "$row1"
-
-# --- row 2: session state, right-aligned to the region edge ----------------
 # On a very narrow terminal even the bare model name plus percentage can exceed
 # the region. Clip the name rather than let the row wrap.
-max_model=$(( cols - 6 ))
+max_model=$(( avail - 6 ))
 if [ "$max_model" -ge 6 ] && [ "${#model}" -gt "$max_model" ]; then
     model="${model:0:$((max_model - 1))}…"
 fi
 
-# Shed detail until the group fits: token counts, then the bar, then the flags.
-for detail in 3 2 1 0; do
-    right=$(build_right "$detail"); rw=$(vis "$right")
-    [ "$rw" -le "$cols" ] && break
+SEP=" ${C_SEP}|${OFF} "
+sep_w=3
+min_dir=12                               # shorter than this and "…x/y" is noise
+
+# Fit by shedding detail, most expendable first. The pairs are (state, identity)
+# detail levels: the path is squeezed -- and truncated from the left, keeping
+# the leaf -- before any session state is given up, because the leaf directory
+# is recoverable from the prompt above while the token budget is not.
+row=""
+for combo in "3 2" "2 2" "1 2" "0 2" "0 1" "0 0"; do
+    set -- $combo
+    state=$(build_state "$1"); sw=$(vis "$state")
+    fixed=$(vis "$(build_ident "" "$2")")        # identity group minus the path
+    room=$(( avail - sw - sep_w - fixed ))       # columns left for the path
+    if [ "$room" -ge "${#display_dir}" ]; then
+        row="${state}${SEP}$(build_ident "$display_dir" "$2")"; break
+    elif [ "$room" -ge "$min_dir" ]; then
+        row="${state}${SEP}$(build_ident "…${display_dir: -$((room - 1))}" "$2")"; break
+    fi
 done
 
-gap=$(( cols - rw ))
-[ "$gap" -lt 0 ] && gap=0
-printf '%*s%s\n' "$gap" "" "$right"
+# Nothing fits: drop the identity group entirely rather than wrap.
+[ -z "$row" ] && row=$(build_state 0)
+
+printf '%s\n' "$row"
