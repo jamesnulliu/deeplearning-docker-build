@@ -97,14 +97,24 @@ ln -sf "/usr/bin/lldb-${LLVM_VERSION}" /usr/bin/lldb
 
 # Node.js -- Ubuntu's own nodejs/npm packages are frozen at an old major
 # version (18.x on 24.04), which is too old for current CLI tools (e.g.
-# @anthropic-ai/claude-code requires node >=22) and ships an old npm to
-# match. Use NodeSource's setup script for a current LTS release instead,
-# which brings its own matching current npm -- no separate npm install/
-# upgrade needed.
+# @anthropic-ai/claude-code requires node >=22) and ships an equally old npm
+# to match. Use NodeSource's setup script for a current LTS release instead.
 NODE_MAJOR=22
 wget -O /tmp/nodesource_setup.sh "https://deb.nodesource.com/setup_${NODE_MAJOR}.x"
 bash /tmp/nodesource_setup.sh
 apt-get install -y --no-install-recommends nodejs
+
+# The npm bundled inside a Node release is frozen at whatever was current when
+# that Node was cut, so even a current node 22 still carries an npm 10 -- older
+# than the `allow-scripts` permission model npm 12 introduced. The shipped
+# ~/.npmrc and INSTALL_AI_CLI are written against that model (see data/.npmrc
+# for why claude-code needs it) and are inert on npm 10, so the image would
+# behave differently from the one those files were written for. Track current
+# npm instead: it installs over the bundled copy in /usr/lib/node_modules, so
+# every user gets it, and a per-user NPM_CONFIG_PREFIX only redirects where
+# packages land, not which npm runs.
+npm install -g npm@latest
+npm --version
 
 # Install Rust into a shared, root-owned location. cargo/rustc/rustup are exposed
 # on the default PATH via /usr/local/bin symlinks, so every user can build without

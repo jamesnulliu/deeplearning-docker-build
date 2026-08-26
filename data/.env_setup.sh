@@ -10,20 +10,29 @@ echo "[ENV-SETUP] Sourcing ${FILE_PATH}"
 echo "            ENV_SETUP_FILE: ${ENV_SETUP_FILE:-<not set>}"
 echo ""
 
+# Dotfiles
+echo "[ENV-SETUP] Default configs live in ${JNL_DL_SKEL}, seeded into \$HOME"
+echo "            run 'ADOPT_DEFAULT_CONFIGS' to force re-sync updated defaults."
+
+if [ -e "${HOME}/.ssh" ] || [ -e "${HOME}/.gitconfig" ]; then
+    echo "[ENV-SETUP] Host identity: linked"
+else
+    echo "[ENV-SETUP] Host identity: no separate host home detected to link from"
+fi
+
 # Editor
 export EDITOR="${EDITOR:-vim}"
 export VISUAL="${VISUAL:-vim}"
 echo "[ENV-SETUP] EDITOR: ${EDITOR}"
-echo "            |- VISUAL: ${VISUAL}"
-
+echo "            VISUAL: ${VISUAL}"
 # Terminal colors
 case "${TERM:-}" in
     *256color*|*-direct) ;;
     *) export TERM="xterm-256color" ;;
 esac
 export COLORTERM="${COLORTERM:-truecolor}"
-echo "[ENV-SETUP] TERM: ${TERM}"
-echo "            |- COLORTERM: ${COLORTERM}"
+echo "            TERM: ${TERM}"
+echo "            COLORTERM: ${COLORTERM}"
 
 # Time zone
 # export TZ="Etc/UTC"
@@ -101,13 +110,4 @@ if command -v codex > /dev/null 2>&1 && command -v claude > /dev/null 2>&1; then
     fi
 else
     echo "            |- codex/claude not found; run 'INSTALL_AI_CLI'"
-fi
-
-# Dotfiles
-echo "[ENV-SETUP] Default configs live in ${JNL_DL_SKEL}, seeded into \$HOME"
-echo "            run 'ADOPT_DEFAULT_CONFIGS' to force re-sync updated defaults."
-if [ -e "${HOME}/.ssh" ] || [ -e "${HOME}/.gitconfig" ]; then
-    echo "[ENV-SETUP] Host identity: linked"
-else
-    echo "[ENV-SETUP] Host identity: no separate host home detected to link from"
 fi
