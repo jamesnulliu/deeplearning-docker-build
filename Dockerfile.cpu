@@ -45,6 +45,14 @@ RUN chmod +x /usr/local/bin/install-common.sh && \
     /usr/local/bin/install-common.sh && \
     rm -f /usr/local/bin/install-common.sh
 
+# Set after the locale is generated, so the build itself is not run against a
+# locale that does not exist yet. `docker exec` inherits nothing from the host
+# environment, so without this the default shell would land in the C locale
+# (ASCII) and multi-byte input would break again for anyone who does not
+# forward a LANG of their own.
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+
 COPY data/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

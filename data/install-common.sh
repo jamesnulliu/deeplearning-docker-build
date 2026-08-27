@@ -31,6 +31,7 @@ apt-get install -y --no-install-recommends \
     lsb-release \
     software-properties-common \
     gnupg \
+    locales \
     git \
     acl \
     sed \
@@ -66,6 +67,23 @@ if [ -n "${TZ:-}" ]; then
     ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime
     echo "${TZ}" > /etc/timezone
 fi
+
+# Generate real UTF-8 locales. The base image ships only C.utf8, so the
+# `LANG=en_US.UTF-8` that virtually every ssh/VS Code session forwards into the
+# container names a locale that does not exist. glibc then silently falls back
+# to C, whose charmap is ANSI_X3.4-1968 (7-bit ASCII), and anything that sizes
+# its character handling off the locale follows it down: vim picks
+# encoding=latin1 and renders each byte of a UTF-8 Chinese character as a
+# separate garbage glyph. Generating the locale is what makes the forwarded
+# LANG mean what it says. zh_CN.UTF-8 is generated too so it can simply be
+# selected when Chinese collation or messages are wanted.
+# Appending an already-commented-out entry is harmless: locale-gen only reads
+# uncommented lines, so `>>` is both the create-if-missing and the enable path.
+for loc in "en_US.UTF-8 UTF-8" "zh_CN.UTF-8 UTF-8"; do
+    grep -qxF "${loc}" /etc/locale.gen 2>/dev/null || echo "${loc}" >> /etc/locale.gen
+done
+locale-gen
+update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en
 
 wget -O /tmp/kitware-archive.sh https://apt.kitware.com/kitware-archive.sh
 bash /tmp/kitware-archive.sh

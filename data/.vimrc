@@ -1,3 +1,26 @@
+" ---------------------------------------------------------------------------
+" Encoding. Must be the first thing in this file: 'encoding' decides how every
+" buffer loaded after it is interpreted.
+"
+" Vim picks 'encoding' from the locale (nl_langinfo(CODESET)) at startup. A
+" container with no generated UTF-8 locale reports ANSI_X3.4-1968, so vim
+" settles on latin1 and every multi-byte character typed at the terminal --
+" Chinese, an em dash, an emoji -- arrives as one latin1 glyph per UTF-8 byte.
+" That is the "strange chars instead of Chinese" mojibake. The image now
+" generates en_US.UTF-8 (see data/install-common.sh), but pinning UTF-8 here
+" keeps vim correct under any runtime that starts it with a broken or unset
+" LANG -- Apptainer, `docker run --entrypoint bash`, a bare ssh session.
+set encoding=utf-8
+scriptencoding utf-8
+set termencoding=utf-8  " Bytes exchanged with the terminal are UTF-8
+set fileencoding=utf-8  " Write new files as UTF-8
+" Read order: first entry that decodes the whole file wins, so utf-8 comes
+" before the legacy CJK codepages and latin1 sits last as the never-fails
+" fallback (it accepts any byte, so nothing after it would ever be tried).
+set fileencodings=ucs-bom,utf-8,gb18030,big5,euc-jp,euc-kr,latin1
+set ambiwidth=single    " Ambiguous-width cells: match the terminal's own choice
+" ---------------------------------------------------------------------------
+
 au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
 
 " Vim probes the terminal for its background colour (OSC 11) and falls back to
@@ -46,8 +69,13 @@ augroup numbertoggle
   autocmd BufLeave,FocusLost,InsertEnter,WinLeave   * if &nu                  | set nornu | endif
 augroup END
 
-" Set the menu & message to English
+" Set the menu & message to English.
+"
+" The `.UTF-8` suffix is load-bearing: $LANG is inherited by everything vim
+" spawns (`:!`, `:make`, `:terminal`), and a bare `en_US` names a locale that
+" does not exist, which drops those children back to the C locale's ASCII
+" charmap and re-creates the mojibake this file just fixed.
 set langmenu=en_US
-let $LANG='en_US'
+let $LANG='en_US.UTF-8'
 source $VIMRUNTIME/delmenu.vim
 source $VIMRUNTIME/menu.vim
